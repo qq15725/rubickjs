@@ -1,23 +1,26 @@
 {
-  "name": "starter-ts",
+  "name": "rubickjs",
   "type": "module",
   "version": "0.0.3",
   "packageManager": "pnpm@7.26.2",
-  "description": "Starter template for TypeScript library",
+  "description": "Rubick.js is a JavaScript game and rendering engine",
   "author": "wxm",
   "license": "MIT",
-  "homepage": "https://github.com/qq15725/starter-ts",
+  "homepage": "https://github.com/qq15725/rubickjs",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/qq15725/starter-ts.git"
+    "url": "git+https://github.com/qq15725/rubickjs.git"
   },
   "bugs": {
-    "url": "https://github.com/qq15725/starter-ts/issues"
+    "url": "https://github.com/qq15725/rubickjs/issues"
   },
   "keywords": [
-    "starter",
-    "template",
-    "typescript"
+    "rubick",
+    "rubickjs",
+    "webgl",
+    "webgl2",
+    "game-engine",
+    "2d"
   ],
   "sideEffects": false,
   "exports": {
