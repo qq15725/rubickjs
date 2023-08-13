@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     /* 基础选项 */
-    "target": "es2017", /* 指定 ECMAScript 目标版本: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017','ES2018' 或 'ESNEXT'。 */
+    "target": "es5", /* 指定 ECMAScript 目标版本: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017','ES2018' 或 'ESNEXT'。 */
     "module": "esnext", /* 指定模块代码生成: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 或 'ESNext'。 */
     "lib": [ /* 指定要包含在编译中的库文件。 */
       "esnext",
@@ -14,7 +14,7 @@
     "declaration": true, /* 生成相应的 '.d.ts' 文件。 */
     "declarationMap": true,
     "sourceMap": true, /* 生成相应的 '.map' 文件。 */
-    "outDir": "./dist", /* 将输出重定向到目录。 */
+    "outDir": "./", /* 将输出重定向到目录。 */
     "downlevelIteration": true, /* 当目标为 'ES5' 或 'ES3' 时，为 'for-of' 、'spread' 和 'destructuring' 中的可迭代对象提供全面支持。 */
     "resolveJsonModule": true, /* 解析 json 模块。 */
 

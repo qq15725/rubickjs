@@ -1,67 +1,31 @@
 {
   "name": "rubickjs",
-  "type": "module",
   "version": "0.0.1-beta.0",
-  "packageManager": "pnpm@7.26.2",
-  "description": "Rubick.js is a JavaScript game and rendering engine",
-  "author": "wxm",
-  "license": "MIT",
-  "homepage": "https://github.com/qq15725/rubickjs",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/qq15725/rubickjs.git"
-  },
-  "bugs": {
-    "url": "https://github.com/qq15725/rubickjs/issues"
-  },
-  "keywords": [
-    "rubick",
-    "rubickjs",
-    "webgl",
-    "webgl2",
-    "game-engine",
-    "2d"
-  ],
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "types": "./types/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
-    }
-  },
-  "main": "dist/index.mjs",
-  "module": "dist/index.mjs",
-  "types": "types/index.d.ts",
-  "browser": "dist/index.js",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "./types/*",
-        "./types/index.d.ts"
-      ]
-    }
-  },
-  "files": [
-    "dist",
-    "types"
-  ],
+  "private": true,
   "scripts": {
     "dev": "vite",
-    "lint": "eslint src",
-    "test": "vitest --no-threads --no-isolate",
-    "build": "vite build && tsc --project tsconfig.build.json",
+    "lint": "eslint \"packages/*/{src,scripts}/**/*.{ts,tsx,js}\"",
+    "lint:fix": "eslint \"packages/*/{src,scripts}/**/*.{ts,tsx,js}\" --fix",
+    "build": "pnpm -r run build",
+    "publish": "pnpm -r publish --no-git-checks",
     "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
-    "release": "bumpp package.json --commit \"release: v%s\" --push --all --tag"
+    "release": "bumpp package.json packages/*/package.json --commit \"release: v%s\" --push --all --tag"
   },
   "devDependencies": {
     "@qq15725/eslint-config": "^1.1.0",
-    "@types/node": "^18.14.0",
-    "bumpp": "^8.2.1",
-    "conventional-changelog-cli": "^2.2.2",
-    "eslint": "^8.34.0",
+    "@rollup/plugin-commonjs": "^25.0.4",
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-terser": "^0.4.3",
+    "@rollup/plugin-typescript": "^11.1.2",
+    "@types/node": "^20.4.10",
+    "bumpp": "^9.1.1",
+    "conventional-changelog-cli": "^3.0.0",
+    "eslint": "^8.47.0",
+    "rimraf": "^5.0.1",
+    "rollup": "^3.28.0",
+    "tslib": "^2.6.1",
     "typescript": "^4.9.5",
-    "vite": "^4.1.2",
-    "vitest": "^0.28.5"
+    "vite": "^4.4.9",
+    "vitest": "^0.34.1"
   }
 }

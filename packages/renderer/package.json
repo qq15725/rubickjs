@@ -1,0 +1,55 @@
+{
+  "name": "@rubickjs/renderer",
+  "version": "0.0.1-beta.0",
+  "description": "Renderer for Rubick.js",
+  "author": "wxm",
+  "license": "MIT",
+  "keywords": [
+    "rubick",
+    "rubickjs",
+    "renderer",
+    "webgl",
+    "gl",
+    "graphics",
+    "computer graphics",
+    "opengl",
+    "glsl"
+  ],
+  "homepage": "https://github.com/qq15725/rubickjs/blob/main/packages/renderer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qq15725/rubickjs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/qq15725/rubickjs/issues"
+  },
+  "scripts": {
+    "build": "npm run clean && rollup -c",
+    "clean": "rimraf dist",
+    "watch": "rollup -c -w"
+  },
+  "files": [
+    "package.json",
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "default": "./dist/index.js"
+    },
+    "./*": "./*"
+  },
+  "main": "dist/index.js",
+  "unpkg": "dist/index.umd.min.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@rubickjs/shared": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
