@@ -9,7 +9,7 @@ export class Timeline extends Resouce {
   /**
    * End time
    */
-  endTime: number | null = null
+  endTime: number
 
   /**
    * Current time
@@ -25,9 +25,9 @@ export class Timeline extends Resouce {
     super()
     if (Array.isArray(range)) {
       this.startTime = range[0]
-      this.endTime = range[1]
+      this.endTime = range[1] ?? Number.MAX_SAFE_INTEGER
     } else {
-      this.endTime = range
+      this.endTime = range ?? Number.MAX_SAFE_INTEGER
     }
     this.loop = loop
   }
@@ -40,14 +40,12 @@ export class Timeline extends Resouce {
   addTime(delta: number) {
     let time = this.currentTime
     time += delta
-    if (this.endTime) {
-      if (this.loop) {
-        if (time > this.endTime) {
-          time = (time % this.endTime) + this.startTime
-        }
-      } else {
-        time = Math.min(time, this.endTime)
+    if (this.loop) {
+      if (time > this.endTime) {
+        time = (time % this.endTime) + this.startTime
       }
+    } else {
+      time = Math.min(time, this.endTime)
     }
     this.currentTime = time
   }

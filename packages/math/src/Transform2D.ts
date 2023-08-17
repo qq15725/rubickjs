@@ -1,5 +1,5 @@
 import { Matrix3 } from './Matrix3'
-import { ObservablePoint } from './ObservablePoint'
+import { Vector2 } from './Vector2'
 
 const PI_2 = Math.PI * 2
 
@@ -55,17 +55,17 @@ export class Transform2D extends Matrix3 {
   /**
    * The position
    */
-  readonly position = new ObservablePoint(this._onUpdate, this, 0, 0)
+  readonly position = new Vector2(0, 0).onUpdate(this._onUpdate.bind(this))
 
   /**
    * The scale
    */
-  readonly scale = new ObservablePoint(this._onUpdate, this, 1, 1)
+  readonly scale = new Vector2(1, 1).onUpdate(this._onUpdate.bind(this))
 
   /**
    * Transform's skew (in radians)
    */
-  readonly skew = new ObservablePoint(this._onUpdateSkew, this, 0, 0)
+  readonly skew = new Vector2(0, 0).onUpdate(this._onUpdateSkew.bind(this))
 
   /** The rotation of the object in radians. */
   get rotation(): number { return this._rotation }
@@ -137,7 +137,7 @@ export class Transform2D extends Matrix3 {
    */
   skewed(x: number, y: number): Transform2D {
     const cloned = this.clone()
-    cloned.skew.set(x, y)
+    cloned.skew.update(x, y)
     cloned.update()
     return cloned
   }
@@ -150,7 +150,7 @@ export class Transform2D extends Matrix3 {
    */
   scaled(x: number, y: number): Transform2D {
     const cloned = this.clone()
-    cloned.scale.set(x, y)
+    cloned.scale.update(x, y)
     cloned.update()
     return cloned
   }
@@ -163,7 +163,7 @@ export class Transform2D extends Matrix3 {
    */
   translated(x: number, y: number): Transform2D {
     const cloned = this.clone()
-    cloned.position.set(x, y)
+    cloned.position.update(x, y)
     cloned.update()
     return cloned
   }

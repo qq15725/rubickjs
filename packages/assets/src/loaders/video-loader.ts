@@ -10,7 +10,7 @@ export const videoMime = new Set([
 export const videoLoader: Loader = {
   test: ({ mime }) => videoMime.has(mime),
   load: async ({ url }): Promise<Texture> => {
-    return new Texture(
+    const texture = new Texture(
       await new Promise<HTMLVideoElement>((resolve, reject) => {
         const src = document.createElement('video')
         src.playsInline = true
@@ -21,6 +21,10 @@ export const videoLoader: Loader = {
         src.oncanplay = () => resolve(src)
         src.onerror = e => reject(e)
       }),
-    ).setName(url)
+    )
+
+    texture.name = url
+
+    return texture
   },
 }

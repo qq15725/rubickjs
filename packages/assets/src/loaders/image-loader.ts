@@ -12,7 +12,7 @@ export const imageMime = new Set([
 export const imageLoader: Loader = {
   test: ({ mime }) => imageMime.has(mime),
   load: async ({ url }): Promise<Texture> => {
-    return new Texture(
+    const texture = new Texture(
       await new Promise<HTMLImageElement>((resolve, reject) => {
         const src = new Image()
         src.crossOrigin = 'anonymous'
@@ -24,6 +24,10 @@ export const imageLoader: Loader = {
           src.onerror = e => reject(e)
         }
       }),
-    ).setName(url)
+    )
+
+    texture.name = url
+
+    return texture
   },
 }

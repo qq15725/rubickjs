@@ -5,16 +5,26 @@ import { Vector } from './Vector'
  */
 export class Vector2 extends Vector {
   get x() { return this[0] }
-  set x(val) { this[0] = val }
+  set x(val) {
+    if (this[0] !== val) {
+      this[0] = val
+      this._onUpdateCallback?.(this[0], this[1])
+    }
+  }
 
   get y() { return this[1] }
-  set y(val) { this[1] = val }
+  set y(val) {
+    if (this[1] !== val) {
+      this[1] = val
+      this._onUpdateCallback?.(this[0], this[1])
+    }
+  }
 
-  get width() { return this[0] }
-  set width(val) { this[0] = val }
+  get width() { return this.x }
+  set width(val) { this.x = val }
 
-  get height() { return this[1] }
-  set height(val) { this[1] = val }
+  get height() { return this.y }
+  set height(val) { this.y = val }
 
   constructor(x = 0, y = 0) {
     super(2)
@@ -22,14 +32,17 @@ export class Vector2 extends Vector {
     this[1] = y
   }
 
-  override set(x: number | ArrayLike<number>, y?: number): this {
-    if (typeof x === 'number') {
-      this[0] = x
-      this[1] = y ?? x
-    } else {
-      super.set(x, y)
-    }
+  override onUpdate(callback: (x: number, y: number) => void): this {
+    this._onUpdateCallback = callback
     return this
+  }
+
+  update(x: number, y: number) {
+    if (this[0] !== x || this[1] !== y) {
+      this[0] = x
+      this[1] = y
+      this._onUpdateCallback?.(x, y)
+    }
   }
 
   getLength(): number {

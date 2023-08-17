@@ -41,7 +41,7 @@ export class UvGeometry extends Geometry {
     this.positionBuffer.data = vertices
     this.uvBuffer.data = uvs
     this.indexBuffer!.data = indices
-    this.dirty.add('buffers')
+    this.addDirty('buffers')
     return this
   }
 }

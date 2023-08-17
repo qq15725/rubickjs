@@ -109,16 +109,16 @@ export class Path2D extends Node2D {
     this.vertices = new Float32Array(vertices)
     this.uvs = new Float32Array(uvs)
     this.indices = new Uint16Array(indices)
-    this.dirty.add('buffers')
+    this.addDirty('buffers')
   }
 
-  render() {
+  protected override _render() {
     if (!this.vertices || !this.uvs || !this.indices) {
       return
     }
 
-    if (this.dirty.size > 0) {
-      this.dirty.clear()
+    if (this.isDirty) {
+      this.clearDirty()
 
       this.geometry.update(
         this.vertices,

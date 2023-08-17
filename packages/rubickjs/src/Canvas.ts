@@ -1,14 +1,14 @@
 import { Color } from '@rubickjs/math'
-import { Renderer, scopeRun } from '@rubickjs/renderer'
+import { WebGLRenderer, setCurrentRenderer } from '@rubickjs/renderer'
 import { SceneTree } from '@rubickjs/scene'
-import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER } from '@rubickjs/shared'
+import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER, createHTMLCanvas } from '@rubickjs/shared'
 import { Input } from '@rubickjs/input'
 import type { PointerInputEvent, WheelInputEvent } from '@rubickjs/input'
 import type { ColorValue } from '@rubickjs/math'
 import type { Node, Timeline, Viewport } from '@rubickjs/scene'
 
 export interface CanvasOptions extends WebGLContextAttributes {
-  view?: HTMLCanvasElement
+  view?: HTMLCanvasElement | null
   width?: number
   height?: number
   pixelRatio?: number
@@ -45,12 +45,12 @@ export class Canvas extends EventEmitter {
   /**
    * Input
    */
-  readonly input = new Input(this)
+  readonly input = new Input()
 
   /**
-   * Renderer
+   * WebGLRenderer
    */
-  readonly renderer: Renderer
+  readonly renderer: WebGLRenderer
   get pixelRatio(): number { return this.renderer.pixelRatio }
   get view(): HTMLCanvasElement | undefined { return this.renderer.view }
   get screen(): { x: number; y: number; width: number; height: number } { return this.renderer.screen }
@@ -96,30 +96,27 @@ export class Canvas extends EventEmitter {
     } = options
 
     this.tree = new SceneTree(timeline)
-    this.renderer = gl
-      ? new Renderer(gl)
-      : new Renderer(view, {
-        ...defaultOptions,
-        ...glOptions,
-      })
+    this.renderer = new WebGLRenderer(gl ?? view ?? createHTMLCanvas(), {
+      ...defaultOptions,
+      ...glOptions,
+    })
     this.renderer.pixelRatio = pixelRatio
 
     this
-      .setupContext()
-      .setupInput()
+      ._setupContext()
+      ._setupInput()
       .resize(
         gl?.drawingBufferWidth || width || view?.clientWidth || 200,
         gl?.drawingBufferHeight || height || view?.clientHeight || 200,
         !view || (!view.style?.width && !view.style?.height),
       )
       .setBackground(background)
-      .hydrate()
   }
 
   /**
    * Setup WebGL context
    */
-  setupContext(): this {
+  protected _setupContext(): this {
     const gl = this.renderer.gl
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
     gl.enable(gl.DEPTH_TEST)
@@ -132,7 +129,7 @@ export class Canvas extends EventEmitter {
   /**
    * Setup input
    */
-  setupInput(): this {
+  protected _setupInput(): this {
     if (this.view) {
       this.input.setTarget(this.view)
 
@@ -203,7 +200,7 @@ export class Canvas extends EventEmitter {
    */
   resize(width: number, height: number, updateCss = true): this {
     this.renderer.resize(width, height, updateCss)
-    this.root.size.set(width, height)
+    this.root.size.update(width, height)
     this.renderer.uniforms.projectionMatrix = this.root.projection.toArray(true)
     return this
   }
@@ -221,9 +218,8 @@ export class Canvas extends EventEmitter {
    * Render scene tree
    */
   render(delta = 0): void {
-    scopeRun(this.renderer, () => {
-      this.tree.process(delta)
-    })
+    setCurrentRenderer(this.renderer)
+    this.tree.process(delta)
   }
 
   /**

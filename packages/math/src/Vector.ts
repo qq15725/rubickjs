@@ -9,10 +9,17 @@ export type VectorTarget = number | NumberArray | Matrix
 export type VectorOutput = NumberArray
 
 export abstract class Vector extends Float64Array {
+  protected _onUpdateCallback?: (...args: Array<number>) => void
+
   constructor(
     readonly dim: number,
   ) {
     super(dim)
+  }
+
+  onUpdate(callback: (...args: Array<number>) => void): this {
+    this._onUpdateCallback = callback
+    return this
   }
 
   protected _operate(
@@ -75,6 +82,8 @@ export abstract class Vector extends Float64Array {
         throw new Error(`Not support operator in '${ this.toName() } ${ operator } Vector'`)
       }
     }
+
+    this._onUpdateCallback?.(...Array.from(result))
 
     return result
   }

@@ -19,6 +19,8 @@ const HEX_PATTERN = /^(#|0x)?(([a-f0-9]{3}){1,2}([a-f0-9]{2})?)$/i
 export class Color {
   static instance = new Color(1, 1, 1, 1)
 
+  protected _value?: ColorValue
+
   get r8(): number { return this.r * 255 & 0xFF }
   get g8(): number { return this.g * 255 & 0xFF }
   get b8(): number { return this.b * 255 & 0xFF }
@@ -52,6 +54,13 @@ export class Color {
     this.g = Math.round(this.g * steps) / steps
     this.b = Math.round(this.b * steps) / steps
     return this
+  }
+
+  update(val: ColorValue) {
+    if (val !== this._value) {
+      this._value = val
+      this.normalize(val)
+    }
   }
 
   normalize(value: ColorValue): this {

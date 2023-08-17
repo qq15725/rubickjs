@@ -62,7 +62,7 @@ export class Geometry extends Resouce {
     const renderer = this.renderer
     let flag = this.materials.get(material)
     if (!flag) {
-      this.materials.set(material, flag = { material: material.uid, geometry: this.uid })
+      this.materials.set(material, flag = { material: material.id, geometry: this.id })
     }
     return renderer.getRelated(flag, () => {
       return renderer.createVertexArray(material.getRelated(), this.getVertexArray())
@@ -76,11 +76,11 @@ export class Geometry extends Resouce {
     const vertexArrayObject = this.getRelated(material)
     renderer.activeVertexArray(vertexArrayObject ?? this.getVertexArray())
 
-    if (this.dirty.has('buffers')) {
-      this.dirty.delete('buffers')
+    if (this.hasDirty('buffers')) {
+      this.deleteDirty('buffers')
       let buffer: AttributeBuffer | undefined
       this.attributes.forEach(attribute => {
-        if (buffer?.uid !== attribute.buffer.uid) {
+        if (buffer?.id !== attribute.buffer.id) {
           buffer = attribute.buffer
           buffer.update()
         }
@@ -88,8 +88,8 @@ export class Geometry extends Resouce {
       this.indexBuffer?.update()
     }
 
-    if (this.dirty.has('vertexArray')) {
-      this.dirty.delete('vertexArray')
+    if (this.hasDirty('vertexArray')) {
+      this.deleteDirty('vertexArray')
       if (vertexArrayObject) {
         renderer.updateVertexArray(
           material.getRelated()!,

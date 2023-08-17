@@ -1,16 +1,16 @@
 import { Matrix3 } from './Matrix3'
-import { ObservablePoint } from './ObservablePoint'
+import { Vector2 } from './Vector2'
 
 export class Projection2D extends Matrix3 {
   /**
    * x and y
    */
-  readonly position: ObservablePoint
+  readonly position: Vector2
 
   /**
    * width and height
    */
-  readonly size: ObservablePoint
+  readonly size: Vector2
 
   constructor(
     x = 0,
@@ -20,8 +20,8 @@ export class Projection2D extends Matrix3 {
     public flipY = false,
   ) {
     super()
-    this.position = new ObservablePoint(this._onUpdate, this, x, y)
-    this.size = new ObservablePoint(this._onUpdate, this, width, height)
+    this.position = new Vector2(x, y).onUpdate(this._onUpdate.bind(this))
+    this.size = new Vector2(width, height).onUpdate(this._onUpdate.bind(this))
   }
 
   protected _onUpdate() {

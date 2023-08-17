@@ -1,4 +1,5 @@
-import { ObservablePoint } from '@rubickjs/math'
+import { Vector2 } from '@rubickjs/math'
+import { isImageElement, isVideoElement } from '@rubickjs/shared'
 import { Resouce } from '../main/Resouce'
 import type { WebGLTextureFilterMode, WebGLTextureWrapMode } from '@rubickjs/renderer'
 
@@ -24,7 +25,7 @@ export class Texture extends Resouce {
   /**
    * Texture width and height
    */
-  readonly size: ObservablePoint
+  readonly size: Vector2
 
   get width() { return this.size.x }
   get height() { return this.size.y }
@@ -54,16 +55,18 @@ export class Texture extends Resouce {
     super()
     this.source = 'pixels' in source ? source.pixels : source
     const any = source as any
-    this.size = new ObservablePoint(
-      this._onUpdateSize,
-      this,
+    this.size = new Vector2(
       Number(any.naturalWidth || any.videoWidth || any.width || 0),
       Number(any.naturalHeight || any.videoHeight || any.height || 0),
-    )
+    ).onUpdate(this._onUpdateSize.bind(this))
+
+    if (isVideoElement(source) || isImageElement(source)) {
+      this.name = source.src
+    }
   }
 
   protected _onUpdateSize() {
-    this.dirty.add('size')
+    this.addDirty('size')
   }
 
   getTextureProps() {
@@ -91,7 +94,7 @@ export class Texture extends Resouce {
   }
 
   update() {
-    this.dirty.clear()
+    this.clearDirty()
 
     this.renderer
       .updateTexture(this.getRelated(), this.getTextureProps())
@@ -104,7 +107,7 @@ export class Texture extends Resouce {
         value: this.getRelated(),
         unit,
       }, () => {
-        if (this.dirty.size > 0) {
+        if (this.isDirty) {
           this.update()
         }
 

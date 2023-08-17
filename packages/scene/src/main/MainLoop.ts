@@ -1,36 +1,29 @@
-import { uid } from '@rubickjs/shared'
 import { Resouce } from './Resouce'
 
 export abstract class MainLoop extends Resouce {
   /**
    * Main loop UID
    */
-  protected loopId?: number
+  protected _loopId = 0
 
   /**
    * Start main loop
    */
   startLoop(fps: number, process?: (delta: number) => void) {
+    process = process ?? this.process
     const spf = 1000 / fps
-    const id = this.loopId = uid()
-    let then = 0
-
-    const loop = (now: number) => {
-      if (id !== this.loopId) {
-        return
-      }
+    const id = ++this._loopId
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this
+    let startTime = 0
+    requestAnimationFrame(function loop(now: number) {
+      if (!startTime) startTime = now
+      if (id !== self._loopId) return
       requestAnimationFrame(loop)
-      const delta = ~~(now - then)
-      if (delta < spf) {
-        return
-      }
-      then = now
-      ;(process ?? this.process)(delta)
-    }
-
-    requestAnimationFrame(now => {
-      then = now
-      requestAnimationFrame(loop)
+      const elapsed = ~~(now - startTime)
+      if (elapsed < spf) return
+      startTime = now
+      process?.(elapsed)
     })
   }
 
@@ -38,7 +31,7 @@ export abstract class MainLoop extends Resouce {
    * Stop main loop
    */
   stopLoop() {
-    this.loopId = undefined
+    ++this._loopId
   }
 
   /**

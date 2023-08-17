@@ -1,6 +1,10 @@
 import { IN_BROWSER, SUPPORTS_WEBGL2 } from './constants'
 
 export const isPromise = <T>(val: object): val is Promise<T> => val && typeof (val as any).then === 'function'
+
+export const isElementNode = (node: unknown): node is Element => node !== null && typeof node === 'object' && (node as any).nodeType === 1 // Node.ELEMENT_NODE
+export const isVideoElement = (node: unknown): node is HTMLVideoElement => isElementNode(node) && node.tagName === 'VIDEO'
+export const isImageElement = (node: unknown): node is HTMLImageElement => isElementNode(node) && node.tagName === 'IMG'
 export const isCanvasElement = (node: unknown): node is HTMLCanvasElement =>
   typeof node === 'object'
   && node !== null

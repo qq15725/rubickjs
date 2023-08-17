@@ -1,4 +1,4 @@
-import { uid, createHTMLCanvas, isCanvasElement, isWebgl2 } from '@rubickjs/shared'
+import { createHTMLCanvas, isCanvasElement, isWebgl2, uid } from '@rubickjs/shared'
 import { getVarTypeSize } from './utils'
 import { Renderer } from './Renderer'
 import { WebGLBatchRenderer } from './WebGLBatchRenderer'

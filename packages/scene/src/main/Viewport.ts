@@ -1,7 +1,7 @@
 import { Projection2D } from '@rubickjs/math'
 import { QuadUvGeometry, UvMaterial, ViewportTexture } from '../resources'
 import { Node } from './Node'
-import type { ObservablePoint } from '@rubickjs/math'
+import type { Vector2 } from '@rubickjs/math'
 
 export class Viewport extends Node {
   protected framebuffer = 0
@@ -24,8 +24,8 @@ export class Viewport extends Node {
   /**
    * Viewport x and y
    */
-  get position(): ObservablePoint { return this.projection.position }
-  set position(val: { x: number; y: number }) { this.projection.position.copy(val) }
+  get position(): Vector2 { return this.projection.position }
+  set position(val: { x: number; y: number }) { this.projection.position.update(val.x, val.y) }
 
   get x(): number { return this.position.x }
   set x(val: number) { this.position.x = val }
@@ -36,8 +36,8 @@ export class Viewport extends Node {
   /**
    * Viewport width and height
    */
-  get size(): ObservablePoint { return this.projection.size }
-  set size(val: { x: number; y: number }) { this.projection.size.copy(val) }
+  get size(): Vector2 { return this.projection.size }
+  set size(val: { x: number; y: number }) { this.projection.size.update(val.x, val.y) }
 
   get width() { return this.size.x }
   set width(val: number) { this.size.x = val }
@@ -65,9 +65,8 @@ export class Viewport extends Node {
   }
 
   update() {
-    const renderer = this.renderer
-    this.dirty.clear()
-    renderer.updateFramebuffer(this.getRelated(), this.getFramebufferProps())
+    this.clearDirty()
+    this.renderer.updateFramebuffer(this.getRelated(), this.getFramebufferProps())
   }
 
   /**
@@ -102,14 +101,14 @@ export class Viewport extends Node {
       // update textures
       this.framebuffers.forEach(framebuffer => {
         framebuffer.texture.pixelRatio = renderer.pixelRatio
-        framebuffer.texture.size.set(width, height)
-        if (framebuffer.texture.dirty.size > 0) {
+        framebuffer.texture.size.update(width, height)
+        if (framebuffer.texture.isDirty) {
           framebuffer.texture.update()
         }
       })
 
       // update WebGL framebuffer
-      if (this.dirty.size > 0) {
+      if (this.isDirty) {
         this.update()
       }
 
@@ -134,11 +133,11 @@ export class Viewport extends Node {
   }
 
   /**
-   * Redarw current viewport
+   * Redraw current viewport
    *
    * @param cb
    */
-  redarw(cb: () => void) {
+  redraw(cb: () => void) {
     // flush batch render
     this.renderer.flush()
 
@@ -168,10 +167,11 @@ export class Viewport extends Node {
    * @param target
    */
   copy(target: Viewport): void {
+    this.size = target.size
     this.activate()
     this.clear()
     target.texture.activate(0)
-    QuadUvGeometry.instance.draw(UvMaterial.instance, {
+    QuadUvGeometry.draw(UvMaterial.instance, {
       sampler: 0,
     })
   }

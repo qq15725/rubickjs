@@ -1,6 +1,5 @@
-import { ObservablePoint } from '@rubickjs/math'
 import { PointerInputEvent } from '@rubickjs/input'
-import { isPromise } from '@rubickjs/shared'
+import { isPromise, isVideoElement } from '@rubickjs/shared'
 import { Texture } from '../resources'
 import { Node2D } from './Node2D'
 import type { UIInputEvent } from '@rubickjs/input'
@@ -30,21 +29,6 @@ export class Sprite extends Node2D {
   boundingBox?: Rectangle
 
   /**
-   * The transform origin is the point around which a transformation is applied
-   *
-   * (0 - 1), (0 - 1)
-   */
-  readonly transformOrigin = new ObservablePoint(this._onUpdateTransformOrigin, this, 0.5, 0.5)
-
-  /**
-   * Size
-   */
-  readonly size = new ObservablePoint(this._onUpdateSize, this, 0, 0)
-
-  get width() { return this.size.x }
-  get height() { return this.size.y }
-
-  /**
    * All sprite frame
    */
   frames!: SpriteFrame[]
@@ -66,12 +50,16 @@ export class Sprite extends Node2D {
     return this.frames[this.frame].texture
   }
 
+  protected isVideo = false
+
   /**
    * Batchable props
    */
   protected vertices?: Float32Array
   protected readonly indices = new Uint16Array([0, 1, 2, 0, 2, 3])
   protected readonly uvs = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1])
+
+  needsUpdateVertices() { this.addDirty('vertices') }
 
   constructor(value: Texture | Array<SpriteFrame> | Promise<Texture | Array<SpriteFrame>>) {
     super()
@@ -83,13 +71,9 @@ export class Sprite extends Node2D {
     }
   }
 
-  protected _onUpdateTransformOrigin() {
-    this.dirty.add('transformOrigin')
-  }
-
-  protected _onUpdateSize() {
-    this.dirty.add('size')
-    this.updateScale()
+  protected override _onUpdateSize() {
+    super._onUpdateSize()
+    this._updateScale()
   }
 
   async loadTexture(val: Promise<Texture | Array<SpriteFrame>>): Promise<void> {
@@ -113,23 +97,28 @@ export class Sprite extends Node2D {
     this.duration = this.frames.reduce((total, frame) => total + (frame.duration ?? 0), 0)
 
     this.size.copy(this.frames[0].texture.size)
-    this.updateScale()
-    this.dirty.add('texture')
+    this._updateScale()
+    this.isVideo = isVideoElement(this.texture.source)
+    this.needsUpdateVertices()
   }
 
-  updateScale() {
+  protected override _onUpdateTransform() {
+    this.needsUpdateVertices()
+  }
+
+  protected _updateScale() {
     const { x: width, y: height } = this.size
     const { x: textureWidth, y: textureHeight } = this.texture.size
 
     if (width && height && textureWidth && textureHeight) {
-      this.scale.set(
+      this.scale.update(
         (this.scale.x < 0 ? -1 : 1) * width / textureWidth,
         (this.scale.y < 0 ? -1 : 1) * height / textureHeight,
       )
     }
   }
 
-  updateVertices(): void {
+  protected _updateVertices(): void {
     let { x: width, y: height } = this.texture.size
 
     if (!width || !height) return
@@ -153,7 +142,7 @@ export class Sprite extends Node2D {
     const y0 = y - (originY * height)
     const y1 = y0 + height
 
-    const vertices = new Float32Array(9)
+    const vertices = new Float32Array(8)
     vertices[0] = (a * x0) + (c * y0) + tx
     vertices[1] = (b * x0) + (d * y0) + ty
     vertices[2] = (a * x1) + (c * y0) + tx
@@ -165,7 +154,7 @@ export class Sprite extends Node2D {
     this.vertices = vertices
   }
 
-  syncFrame(currentTime?: number): void {
+  protected _updateFrame(currentTime?: number): void {
     currentTime = (currentTime ?? this.currentTime) - this.visibleTime
 
     if (currentTime < 0) {
@@ -173,20 +162,30 @@ export class Sprite extends Node2D {
       return
     }
 
-    currentTime = currentTime % this.duration
+    currentTime = this.duration ? currentTime % this.duration : 0
     const frames = this.frames
     const len = frames.length
-    let index = len - 1
 
-    for (let time = 0, i = 0; i < len; i++) {
-      time += frames[i]?.duration ?? 0
-      if (time >= currentTime) {
-        index = i
-        break
+    if (this.isVideo) {
+      const source = this.texture.source as HTMLVideoElement
+      currentTime /= 1000
+      if (source.currentTime !== currentTime && !source.seeking) {
+        source.currentTime = currentTime
+        this.texture.update()
       }
-    }
+    } else {
+      let index = len - 1
 
-    this.frame = index
+      for (let time = 0, i = 0; i < len; i++) {
+        time += frames[i]?.duration ?? 0
+        if (time >= currentTime) {
+          index = i
+          break
+        }
+      }
+
+      this.frame = index
+    }
   }
 
   input(event: UIInputEvent) {
@@ -220,12 +219,12 @@ export class Sprite extends Node2D {
     }
   }
 
-  render(currentTime: number) {
-    this.syncFrame(currentTime)
+  protected override _render(currentTime: number) {
+    this._updateFrame(currentTime)
 
-    if (this.dirty.size > 0) {
-      this.dirty.clear()
-      this.updateVertices()
+    if (this.hasDirty('vertices')) {
+      this.deleteDirty('vertices')
+      this._updateVertices()
     }
 
     if (this.vertices) {
@@ -233,9 +232,8 @@ export class Sprite extends Node2D {
         vertices: this.vertices,
         indices: this.indices,
         uvs: this.uvs,
-        texture: this.applyEffects(this.texture).getRelated(),
-        // tint: this.tint.abgr,
-        background: this.backgroundColor.abgr,
+        texture: (this.filter?.redrawTexture(this.texture, this) ?? this.texture).getRelated(),
+        background: this._backgroundColor.abgr,
       })
     }
   }

@@ -14,16 +14,14 @@ export class Node extends Resouce {
    * The timeline of this node
    */
   get timeline(): Timeline | undefined { return this.tree?.timeline }
-
-  /**
-   * The time of this node timeline
-   */
   get currentTime(): number { return this.timeline?.currentTime ?? 0 }
+  get currentStartTime(): number { return this.timeline?.startTime ?? 0 }
+  get currentEndTime(): number { return this.timeline?.endTime ?? 0 }
 
   /**
    * The currently active viewport
    */
-  get activeViewport(): Viewport | undefined { return this.tree?.viewport }
+  get currentViewport(): Viewport | undefined { return this.tree?.viewport }
 
   /**
    * The root viewport of this node
@@ -46,6 +44,45 @@ export class Node extends Resouce {
    * Node's children
    */
   children: Node[] = []
+
+  /**
+   * Whether to display in the scene
+   */
+  visible = true
+  visibleTime = 0
+  visibleDuration?: number
+  get visibleRange(): [number, number] {
+    return [
+      this.visibleTime,
+      this.visibleDuration
+        ? this.visibleTime + this.visibleDuration
+        : this.currentEndTime,
+    ]
+  }
+
+  /** Style */
+  get style() { return this._getStyle() }
+  set style(val) { this._updateStyle(val) }
+
+  protected _getStyle() {
+    return {
+      visibility: this.visible ? 'visible' : 'hidden',
+    }
+  }
+
+  protected _updateStyle(val: Record<string, any>) {
+    if (typeof val.visibility !== 'undefined') {
+      this.visible = val.visibility === 'visible'
+    }
+  }
+
+  isVisible(currentTime = this.currentTime): boolean {
+    if (this.visible) {
+      const [startTime, endTime] = this.visibleRange
+      return startTime <= currentTime && currentTime <= endTime
+    }
+    return false
+  }
 
   /**
    * Set the owning scene tree of this node
