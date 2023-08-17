@@ -18,9 +18,9 @@
     "url": "https://github.com/qq15725/rubickjs/issues"
   },
   "scripts": {
-    "build": "pnpm run clean && rollup -c tsconfig.build.json",
+    "build": "pnpm run clean && rollup -c",
     "clean": "rimraf dist",
-    "watch": "rollup -c -w tsconfig.build.json"
+    "watch": "rollup -c -w"
   },
   "files": [
     "package.json",

@@ -18,7 +18,10 @@ export function createConfig({
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.es6', '.es', '.mjs'],
     }),
     commonjs(),
-    typescript({ sourceMap: true }),
+    typescript({
+      tsconfig: 'tsconfig.build.json',
+      sourceMap: true,
+    }),
   ];
 
   return [
