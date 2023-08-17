@@ -66,7 +66,7 @@ export class Text extends Sprite {
   override get style() { return this._getStyle() }
   override set style(val) { this._updateStyle(val) }
 
-  constructor(text: string) {
+  constructor(text: string, style?: Record<string, any>) {
     super(Texture.EMPTY)
 
     const _onUpdate = this._onNeedsUpdateTextTexture.bind(this)
@@ -83,6 +83,10 @@ export class Text extends Sprite {
     this._direction.on('update', _onUpdate)
 
     this.text = text
+
+    if (style) {
+      this.style = style as any
+    }
   }
 
   protected override _getStyle() {

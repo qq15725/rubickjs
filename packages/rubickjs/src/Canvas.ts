@@ -225,9 +225,9 @@ export class Canvas extends EventEmitter {
   /**
    * Start main loop
    */
-  start(fps = 10): void {
+  start(fps = 60, speed = 1): void {
     this.tree.startLoop(fps, delta => {
-      this.render(delta)
+      this.render(delta * speed)
     })
   }
 

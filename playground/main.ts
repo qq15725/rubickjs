@@ -4,6 +4,12 @@ const cnavsa = new Canvas({
   view: document.querySelector('canvas'),
 })
 
-cnavsa.addChild(new Text('Hello, World!'))
+cnavsa.addChild(
+  new Text('Hello, World!', {
+    fontSize: 22,
+    color: 'red',
+    textDecoration: 'underline',
+  }),
+)
 
 cnavsa.start()
