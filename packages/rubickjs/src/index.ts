@@ -6,3 +6,4 @@ export * from '@rubickjs/scene'
 export * from '@rubickjs/shared'
 
 export * from './Canvas'
+export * from './CanvasOptions'

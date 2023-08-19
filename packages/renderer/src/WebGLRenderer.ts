@@ -119,12 +119,10 @@ export class WebGLRenderer extends Renderer {
   }
 
   constructor(
-    view?: HTMLCanvasElement | WebGLRenderingContext | WebGL2RenderingContext,
+    view: HTMLCanvasElement | WebGLRenderingContext | WebGL2RenderingContext = createHTMLCanvas()!,
     options?: WebGLContextAttributes,
   ) {
     super()
-
-    view ??= createHTMLCanvas()
 
     if (!view) {
       throw new Error('Failed to createHTMLCanvas')

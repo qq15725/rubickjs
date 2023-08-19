@@ -219,6 +219,11 @@ export class Sprite extends Node2D {
     }
   }
 
+  override process(delta: number) {
+    this.emit('process', delta)
+    super.process(delta)
+  }
+
   protected override _render(currentTime: number) {
     this._updateFrame(currentTime)
 

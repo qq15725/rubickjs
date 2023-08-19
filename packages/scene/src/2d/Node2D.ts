@@ -10,13 +10,13 @@ export class Node2D extends CanvasItem {
   /**
    * Update transform
    */
-  protected _updateTransform(): boolean {
+  updateTransform(): boolean {
     const transform = this.transform
 
-    if (transform.update()) {
-      const globalTransform = this.globalTransform
-      globalTransform.copy(transform)
+    if (transform.update() || this.hasDirty('transform')) {
+      this.deleteDirty('transform')
 
+      const globalTransform = this.globalTransform.copy(transform)
       if (this.owner && this.owner instanceof Node2D) {
         const ownerPosition = this.owner.transform.position
         if (ownerPosition.x || ownerPosition.y) {
@@ -26,6 +26,10 @@ export class Node2D extends CanvasItem {
           )
           globalTransform.update()
         }
+      }
+
+      for (let len = this.children.length, i = 0; i < len; i++) {
+        this.children[i].addDirty('transform')
       }
 
       this._onUpdateTransform()
@@ -40,7 +44,7 @@ export class Node2D extends CanvasItem {
   protected _onUpdateTransform() {}
 
   process(delta: number) {
-    this._updateTransform()
+    this.updateTransform()
     super.process(delta)
   }
 }

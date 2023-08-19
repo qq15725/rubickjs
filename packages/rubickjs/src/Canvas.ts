@@ -3,28 +3,9 @@ import { WebGLRenderer, setCurrentRenderer } from '@rubickjs/renderer'
 import { SceneTree } from '@rubickjs/scene'
 import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER, createHTMLCanvas } from '@rubickjs/shared'
 import { Input } from '@rubickjs/input'
+import type { CanvasOptions } from './CanvasOptions'
 import type { PointerInputEvent, WheelInputEvent } from '@rubickjs/input'
-import type { ColorValue } from '@rubickjs/math'
 import type { Node, Timeline, Viewport } from '@rubickjs/scene'
-
-export interface CanvasOptions extends WebGLContextAttributes {
-  view?: HTMLCanvasElement | null
-  width?: number
-  height?: number
-  pixelRatio?: number
-  gl?: WebGLRenderingContext | WebGL2RenderingContext
-  timeline?: Timeline
-  background?: ColorValue
-}
-
-export const defaultOptions = {
-  alpha: true,
-  stencil: true,
-  antialias: false,
-  premultipliedAlpha: true,
-  preserveDrawingBuffer: false,
-  powerPreference: 'default',
-} as const
 
 interface CanvasEventMap {
   'pointerdown': PointerInputEvent
@@ -51,7 +32,16 @@ export class Canvas extends EventEmitter {
    * WebGLRenderer
    */
   readonly renderer: WebGLRenderer
+
+  /**
+   * Device pixel ratio
+   */
   get pixelRatio(): number { return this.renderer.pixelRatio }
+  set pixelRatio(val) {
+    this.renderer.pixelRatio = val
+    this.resize(this.width, this.height, false)
+  }
+
   get view(): HTMLCanvasElement | undefined { return this.renderer.view }
   get screen(): { x: number; y: number; width: number; height: number } { return this.renderer.screen }
   get width(): number { return this.screen.width }
@@ -61,10 +51,12 @@ export class Canvas extends EventEmitter {
     ? new ResizeObserver((entries) => {
       const entry = entries[0]
       if (entry.target === this.view) {
-        const { inlineSize: width, blockSize: height } = Array.isArray(entry.contentBoxSize)
-          ? entry.contentBoxSize[0]
-          : entry.contentBoxSize
-        this.resize(width, height, false)
+        if (this.view.style.width && this.view.style.height) {
+          const { inlineSize: width, blockSize: height } = Array.isArray(entry.contentBoxSize)
+            ? entry.contentBoxSize[0]
+            : entry.contentBoxSize
+          this.resize(width, height, false)
+        }
       }
     })
     : undefined
@@ -79,7 +71,13 @@ export class Canvas extends EventEmitter {
   /**
    * Background color
    */
-  readonly background = new Color()
+  protected _background = new Color()
+  get background() { return this._background.value }
+  set background(val) {
+    this._background.value = val
+    const { r, g, b, a } = this._background
+    this.renderer.gl.clearColor(r, g, b, a)
+  }
 
   constructor(options: CanvasOptions = {}) {
     super()
@@ -92,13 +90,18 @@ export class Canvas extends EventEmitter {
       gl,
       timeline,
       background = [0, 0, 0, 0],
-      ...glOptions
+      ...rendererOptions
     } = options
 
     this.tree = new SceneTree(timeline)
     this.renderer = new WebGLRenderer(gl ?? view ?? createHTMLCanvas(), {
-      ...defaultOptions,
-      ...glOptions,
+      alpha: true,
+      stencil: true,
+      antialias: false,
+      premultipliedAlpha: true,
+      preserveDrawingBuffer: false,
+      powerPreference: 'default',
+      ...rendererOptions,
     })
     this.renderer.pixelRatio = pixelRatio
 
@@ -110,7 +113,8 @@ export class Canvas extends EventEmitter {
         gl?.drawingBufferHeight || height || view?.clientHeight || 200,
         !view || (!view.style?.width && !view.style?.height),
       )
-      .setBackground(background)
+
+    this.background = background
   }
 
   /**
@@ -149,29 +153,6 @@ export class Canvas extends EventEmitter {
       })
     }
 
-    return this
-  }
-
-  /**
-   * Set device pixel ratio
-   *
-   * @param value
-   */
-  setPixelRatio(value: number): this {
-    this.renderer.pixelRatio = value
-    this.resize(this.width, this.height, false)
-    return this
-  }
-
-  /**
-   * Set background color
-   *
-   * @param value
-   */
-  setBackground(value: ColorValue): this {
-    this.background.normalize(value)
-    const { r, g, b, a } = this.background
-    this.renderer.gl.clearColor(r, g, b, a)
     return this
   }
 

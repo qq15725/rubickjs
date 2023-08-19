@@ -2,7 +2,6 @@ import { Color, Transform2D, Vector2 } from '@rubickjs/math'
 import { DEG_TO_RAD, RAD_TO_DEG } from '@rubickjs/shared'
 import { Node } from './Node'
 import { Viewport } from './Viewport'
-import type { ColorValue } from '@rubickjs/math'
 import type { Effect } from './Effect'
 
 interface RenderFunc {
@@ -24,7 +23,9 @@ export class CanvasItem extends Node {
    *
    * (0 - 1), (0 - 1)
    */
-  readonly transformOrigin = new Vector2(0.5, 0.5)
+  protected _transformOrigin = new Vector2(0.5, 0.5)
+  get transformOrigin(): Vector2 { return this._transformOrigin }
+  set transformOrigin(val: { x: number; y: number }) { this._transformOrigin.update(val.x, val.y) }
 
   /**
    * Size
@@ -66,8 +67,8 @@ export class CanvasItem extends Node {
 
   /** Background color */
   protected _backgroundColor = new Color()
-  get backgroundColor() { return this._backgroundColor.toHexa() }
-  set backgroundColor(val: ColorValue) { this._backgroundColor.update(val) }
+  get backgroundColor() { return this._backgroundColor.value }
+  set backgroundColor(val) { this._backgroundColor.value = val }
 
   /** CSS style */
   override get style() { return this._getStyle() }

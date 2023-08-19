@@ -20,8 +20,8 @@ export abstract class MainLoop extends Resouce {
       if (!startTime) startTime = now
       if (id !== self._loopId) return
       requestAnimationFrame(loop)
-      const elapsed = ~~(now - startTime)
-      if (elapsed < spf) return
+      const elapsed = now - startTime
+      if (elapsed <= spf) return
       startTime = now
       process?.(elapsed)
     })

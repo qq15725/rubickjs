@@ -1,10 +1,17 @@
-import { Rectangle } from '@rubickjs/math'
 import { IN_BROWSER, Ref } from '@rubickjs/shared'
+import { Rectangle } from '@rubickjs/math'
 import { Texture } from '../resources'
 import { Sprite } from './Sprite'
 import type { ColorValue } from '@rubickjs/math'
 
-export class Text extends Sprite {
+export type FontWeight = 'normal' | 'bold' | 'lighter' | 'bolder' | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
+export type FontStyle = 'normal' | 'italic' | 'oblique' | `oblique ${ string }`
+export type FontKerning = 'auto' | 'none' | 'normal'
+export type TextAlign = 'center' | 'end' | 'left' | 'right' | 'start'
+export type TextBaseline = 'alphabetic' | 'bottom' | 'hanging' | 'ideographic' | 'middle' | 'top'
+export type TextDecoration = 'underline' | 'line-through'
+
+export class Label extends Sprite {
   protected _textTextureCanvas = IN_BROWSER
     ? document.createElement('canvas')
     : undefined
@@ -17,7 +24,7 @@ export class Text extends Sprite {
   get fontSize() { return this._fontSize.value }
   set fontSize(val) { this._fontSize.value = val }
 
-  protected _fontWeight = new Ref<'normal' | 'bold' | 'lighter' | 'bolder' | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900>('normal')
+  protected _fontWeight = new Ref<FontWeight>('normal')
   get fontWeight() { return this._fontWeight.value }
   set fontWeight(val) { this._fontWeight.value = val }
 
@@ -25,11 +32,11 @@ export class Text extends Sprite {
   get fontFamily() { return this._fontFamily.value }
   set fontFamily(val) { this._fontFamily.value = val }
 
-  protected _fontStyle = new Ref<'normal' | 'italic' | 'oblique' | `oblique ${ string }`>('normal')
+  protected _fontStyle = new Ref<FontStyle>('normal')
   get fontStyle() { return this._fontStyle.value }
   set fontStyle(val) { this._fontStyle.value = val }
 
-  protected _fontKerning = new Ref<'auto' | 'none' | 'normal'>('normal')
+  protected _fontKerning = new Ref<FontKerning>('normal')
   get fontKerning() { return this._fontKerning.value }
   set fontKerning(val) { this._fontKerning.value = val }
 
@@ -37,21 +44,25 @@ export class Text extends Sprite {
   get text() { return this._text.value }
   set text(val) { this._text.value = String(val) }
 
-  protected _textAlign = new Ref<'center' | 'end' | 'left' | 'right' | 'start'>('center')
+  protected _textAlign = new Ref<TextAlign>('center')
   get textAlign() { return this._textAlign.value }
   set textAlign(val) { this._textAlign.value = val }
 
-  protected _textBaseline = new Ref<'alphabetic' | 'bottom' | 'hanging' | 'ideographic' | 'middle' | 'top'>('middle')
+  protected _textBaseline = new Ref<TextBaseline>('middle')
   get textBaseline() { return this._textBaseline.value }
   set textBaseline(val) { this._textBaseline.value = val }
 
-  protected _textDecoration = new Ref<'underline' | 'line-through' | undefined>(undefined)
+  protected _textDecoration = new Ref<TextDecoration | undefined>(undefined)
   get textDecoration() { return this._textDecoration.value }
   set textDecoration(val) { this._textDecoration.value = val }
 
   protected _direction = new Ref<'inherit' | 'ltr' | 'rtl'>('inherit')
   get direction() { return this._direction.value }
   set direction(val) { this._direction.value = val }
+
+  /** CSS style */
+  override get style() { return this._getStyle() }
+  override set style(val) { this._updateStyle(val) }
 
   /**
    * All characters in text
@@ -62,32 +73,6 @@ export class Text extends Sprite {
     value: string
     boundingBox: Rectangle
   }> = []
-
-  override get style() { return this._getStyle() }
-  override set style(val) { this._updateStyle(val) }
-
-  constructor(text: string, style?: Record<string, any>) {
-    super(Texture.EMPTY)
-
-    const _onUpdate = this._onNeedsUpdateTextTexture.bind(this)
-    this._color.on('update', _onUpdate)
-    this._fontSize.on('update', _onUpdate)
-    this._fontWeight.on('update', _onUpdate)
-    this._fontFamily.on('update', _onUpdate)
-    this._fontStyle.on('update', _onUpdate)
-    this._fontKerning.on('update', _onUpdate)
-    this._text.on('update', _onUpdate)
-    this._textAlign.on('update', _onUpdate)
-    this._textBaseline.on('update', _onUpdate)
-    this._textDecoration.on('update', _onUpdate)
-    this._direction.on('update', _onUpdate)
-
-    this.text = text
-
-    if (style) {
-      this.style = style as any
-    }
-  }
 
   protected override _getStyle() {
     return {
@@ -126,12 +111,34 @@ export class Text extends Sprite {
     })
   }
 
+  constructor(text: string, style?: Record<string, any>) {
+    super(Texture.EMPTY)
+
+    const _onUpdate = this._onNeedsUpdateTextTexture.bind(this)
+    this._color.on('update', _onUpdate)
+    this._fontSize.on('update', _onUpdate)
+    this._fontWeight.on('update', _onUpdate)
+    this._fontFamily.on('update', _onUpdate)
+    this._fontStyle.on('update', _onUpdate)
+    this._fontKerning.on('update', _onUpdate)
+    this._text.on('update', _onUpdate)
+    this._textAlign.on('update', _onUpdate)
+    this._textBaseline.on('update', _onUpdate)
+    this._textDecoration.on('update', _onUpdate)
+    this._direction.on('update', _onUpdate)
+
+    this.text = text
+    style && (this.style = style as any)
+  }
+
   protected _onNeedsUpdateTextTexture() {
     this.addDirty('textTexture')
   }
 
-  /** disabled update size */
-  protected override _onUpdateSize() {}
+  protected override _onUpdateSize() {
+    super._onUpdateSize()
+    this._onNeedsUpdateTextTexture()
+  }
 
   protected _updateTextTexture() {
     if (!this._textTextureCanvas) {
@@ -153,50 +160,27 @@ export class Text extends Sprite {
     context.textAlign = this.textAlign
     context.font = font
 
-    let width = 0
-    let height = 0
-    let offsetY = 0
-    const rows = this.text.split(/[\r\n]+/).map(text => {
-      const rowWidth = context.measureText(text).width
-      const rowHeight = fontSize * 1.2
-      const y = offsetY
-      offsetY += rowHeight
-      width = Math.max(width, rowWidth)
-      height += rowHeight
-      return {
+    const paragraphs = this.text
+      .split(/[\r\n]+/)
+      .map(text => ({
         text,
         x: 0,
-        y,
-        height: rowHeight,
-        width: rowWidth,
-      }
-    })
+        y: 0,
+        width: context.measureText(text).width,
+        height: fontSize * 1.2,
+      }))
 
-    this.characters.length = 0
-    for (const i in rows) {
-      const row = rows[i]
+    const [textWidth, textHeight] = paragraphs
+      .reduce((size, paragraph) => {
+        size[0] = Math.max(size[0], paragraph.width)
+        size[1] += paragraph.height
+        return size
+      }, [0, 0])
 
-      let offsetX = 0
-      for (const char of row.text) {
-        const charWidth = context.measureText(char).width || fontSize
-        const charHeight = fontSize * 1.2
-        const boundingBox = new Rectangle(
-          offsetX,
-          row.y / height,
-          charWidth / width,
-          charHeight / height,
-        )
+    const [rawWidth, rawHeight] = this.size
 
-        offsetX += boundingBox.width
-
-        if (char.trim()) {
-          this.characters.push({
-            value: char,
-            boundingBox,
-          })
-        }
-      }
-    }
+    const width = rawWidth <= 1 ? textWidth : rawWidth
+    const height = rawHeight <= 1 ? textHeight : rawHeight
 
     context.canvas.width = width
     context.canvas.height = height
@@ -209,58 +193,89 @@ export class Text extends Sprite {
     context.fontKerning = this.fontKerning
     context.clearRect(0, 0, width, height)
 
-    rows.forEach(row => {
-      const offset = [0, 0]
+    let y = 0
+    paragraphs.forEach(paragraph => {
+      const fillPosition = [0, 0]
 
       switch (context.textAlign) {
+        case 'start':
         case 'left':
-          offset[0] = 0
+          paragraph.x = 0
+          fillPosition[0] = 0
           break
         case 'center':
-          offset[0] = row.width / 2
+          paragraph.x = (width - paragraph.width) / 2
+          fillPosition[0] = width / 2
           break
+        case 'end':
         case 'right':
-          offset[0] = row.width
+          paragraph.x = width - paragraph.width
+          fillPosition[0] = width
           break
       }
 
       switch (context.textBaseline) {
         case 'top':
         case 'hanging':
-          offset[1] = 0
+          paragraph.y = y
+          fillPosition[1] = y
           break
         case 'middle':
         case 'alphabetic':
         case 'ideographic':
-          offset[1] = row.height / 2
+          paragraph.y = y + (height - textHeight) / 2
+          fillPosition[1] = paragraph.y + paragraph.height / 2
           break
         case 'bottom':
-          offset[1] = row.height
+          paragraph.y = y + height - textHeight
+          fillPosition[1] = paragraph.y + paragraph.height
           break
       }
 
-      const x = row.x + offset[0]
-      const y = row.y + offset[1]
-
-      context.fillText(row.text, x, y)
+      context.fillText(paragraph.text, fillPosition[0], fillPosition[1])
 
       switch (this.textDecoration) {
         case 'underline':
           context.beginPath()
-          context.moveTo(row.x, row.y + row.height - 2)
-          context.lineTo(row.x + row.width, row.y + row.height - 2)
+          context.moveTo(paragraph.x, paragraph.y + paragraph.height - 2)
+          context.lineTo(paragraph.x + paragraph.width, paragraph.y + paragraph.height - 2)
           context.stroke()
           break
         case 'line-through':
           context.beginPath()
-          context.moveTo(row.x, row.y + row.height / 2)
-          context.lineTo(row.x + row.width, row.y + row.height / 2)
+          context.moveTo(paragraph.x, paragraph.y + paragraph.height / 2)
+          context.lineTo(paragraph.x + paragraph.width, paragraph.y + paragraph.height / 2)
           context.stroke()
           break
       }
+
+      y += paragraph.height
     })
 
     this.setTexture(new Texture(context.canvas))
+
+    // calc characters bbox
+    this.characters.length = 0
+    paragraphs.forEach(paragraph => {
+      let offsetX = 0
+      for (const char of paragraph.text) {
+        const charWidth = context.measureText(char).width || fontSize
+        const charHeight = fontSize * 1.2
+        const boundingBox = new Rectangle(
+          paragraph.x + offsetX,
+          paragraph.y / textHeight,
+          charWidth / textWidth,
+          charHeight / textHeight,
+        )
+        offsetX += boundingBox.width
+        if (char.trim()) {
+          this.characters.push({
+            value: char,
+            boundingBox,
+          })
+        }
+      }
+    })
   }
 
   override process(delta: number) {

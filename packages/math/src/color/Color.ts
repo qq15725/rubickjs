@@ -1,5 +1,5 @@
 import { colord } from 'colord'
-
+import { Ref } from '@rubickjs/shared'
 import type {
   AnyColor,
   HslColor,
@@ -16,11 +16,7 @@ export type ColorValue =
 
 const HEX_PATTERN = /^(#|0x)?(([a-f0-9]{3}){1,2}([a-f0-9]{2})?)$/i
 
-export class Color {
-  static instance = new Color(1, 1, 1, 1)
-
-  protected _value?: ColorValue
-
+export class Color extends Ref<ColorValue> {
   get r8(): number { return this.r * 255 & 0xFF }
   get g8(): number { return this.g * 255 & 0xFF }
   get b8(): number { return this.b * 255 & 0xFF }
@@ -34,11 +30,9 @@ export class Color {
     public b = 0,
     public a = 0,
   ) {
-    //
-  }
+    super([r, g, b, a])
 
-  static from(value: ColorValue) {
-    return new this().normalize(value)
+    this.on('update', this._normalize.bind(this))
   }
 
   set(r = 0, g = 0, b = 0, a = 0): this {
@@ -56,14 +50,7 @@ export class Color {
     return this
   }
 
-  update(val: ColorValue) {
-    if (val !== this._value) {
-      this._value = val
-      this.normalize(val)
-    }
-  }
-
-  normalize(value: ColorValue): this {
+  protected _normalize(value: ColorValue): this {
     let r: number | undefined
     let g: number | undefined
     let b: number | undefined
