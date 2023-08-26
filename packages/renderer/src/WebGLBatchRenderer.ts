@@ -125,10 +125,10 @@ ${ Array.from({ length: maxTextures }, (_, i) => {
         return `${ text }\n  {\n    color = texture2D(samplers[${ i }], vUv);\n  }`
       }).join('') }
 
-  color *= vTint;
   color += (1.0 - color.a) * vBackgroundColor;
-  color = vColorMatrix * color;
   if (color.a > 0.0) {
+    color *= vTint;
+    color = vColorMatrix * color;
     color += vColorMatrixOffset;
   }
   gl_FragColor = color;
