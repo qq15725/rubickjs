@@ -1,7 +1,7 @@
 import { Matrix } from './Matrix'
 
 /**
- * Matrix2(2x2)
+ * Matrix2
  *
  * | x0 | y0 |
  * | x1 | y1 |

@@ -60,22 +60,6 @@ export class Node extends Resouce {
     ]
   }
 
-  /** Style */
-  get style() { return this._getStyle() }
-  set style(val) { this._updateStyle(val) }
-
-  protected _getStyle() {
-    return {
-      visibility: this.visible ? 'visible' : 'hidden',
-    }
-  }
-
-  protected _updateStyle(val: Record<string, any>) {
-    if (typeof val.visibility !== 'undefined') {
-      this.visible = val.visibility === 'visible'
-    }
-  }
-
   isVisible(currentTime = this.currentTime): boolean {
     if (this.visible) {
       const [startTime, endTime] = this.visibleRange
@@ -110,8 +94,12 @@ export class Node extends Resouce {
    * Hook for input event
    */
   input(event: UIInputEvent): void | boolean {
+    const currentTime = this.currentTime
     for (let i = this.children.length - 1; i >= 0; i--) {
-      this.children[i].input(event)
+      const child = this.children[i]
+      if (child.isVisible(currentTime)) {
+        child.input(event)
+      }
     }
   }
 
@@ -119,8 +107,12 @@ export class Node extends Resouce {
    * Hook for per frame process
    */
   process(delta: number): void | boolean {
+    const currentTime = this.currentTime
     for (let len = this.children.length, i = 0; i < len; i++) {
-      this.children[i].process(delta)
+      const child = this.children[i]
+      if (child.isVisible(currentTime)) {
+        child.process(delta)
+      }
     }
   }
 
@@ -136,7 +128,7 @@ export class Node extends Resouce {
    * Nodes can have any number of children, but every child must have a unique id.
    * Child nodes are automatically deleted when the parent node is deleted, so an entire scene can be removed by deleting its topmost node.
    */
-  addChild<T extends Node, D extends Node>(node: T, previousSibling?: D): boolean {
+  appendChild<T extends Node, D extends Node>(node: T, previousSibling?: D): boolean {
     if (node.owner) {
       return false
     }

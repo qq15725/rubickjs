@@ -1,8 +1,8 @@
 import { IN_BROWSER, Ref } from '@rubickjs/shared'
 import { Rectangle } from '@rubickjs/math'
-import { Texture } from '../resources'
+import { LabelStyle, Texture } from '../resources'
 import { Sprite } from './Sprite'
-import type { ColorValue } from '@rubickjs/math'
+import type { ColorValue } from '@rubickjs/color'
 
 export type FontWeight = 'normal' | 'bold' | 'lighter' | 'bolder' | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
 export type FontStyle = 'normal' | 'italic' | 'oblique' | `oblique ${ string }`
@@ -12,6 +12,16 @@ export type TextBaseline = 'alphabetic' | 'bottom' | 'hanging' | 'ideographic' |
 export type TextDecoration = 'underline' | 'line-through'
 
 export class Label extends Sprite {
+  /**
+   * All characters in text
+   *
+   * boundingBox: Rectangle(x: 0 - 1, y: 0 - 1, width: 0 - 1, height: 0 - 1)
+   */
+  characters: Array<{
+    value: string
+    boundingBox: Rectangle
+  }> = []
+
   protected _textTextureCanvas = IN_BROWSER
     ? document.createElement('canvas')
     : undefined
@@ -40,7 +50,7 @@ export class Label extends Sprite {
   get fontKerning() { return this._fontKerning.value }
   set fontKerning(val) { this._fontKerning.value = val }
 
-  protected _text = new Ref<string>('')
+  protected _text = new Ref('')
   get text() { return this._text.value }
   set text(val) { this._text.value = String(val) }
 
@@ -60,56 +70,10 @@ export class Label extends Sprite {
   get direction() { return this._direction.value }
   set direction(val) { this._direction.value = val }
 
-  /** CSS style */
-  override get style() { return this._getStyle() }
-  override set style(val) { this._updateStyle(val) }
-
   /**
-   * All characters in text
-   *
-   * boundingBox: Rectangle(x: 0 - 1, y: 0 - 1, width: 0 - 1, height: 0 - 1)
+   * Style
    */
-  characters: Array<{
-    value: string
-    boundingBox: Rectangle
-  }> = []
-
-  protected override _getStyle() {
-    return {
-      ...super._getStyle(),
-      color: this.color,
-      fontSize: this.fontSize,
-      fontWeight: this.fontWeight,
-      fontFamily: this.fontFamily,
-      fontStyle: this.fontStyle,
-      fontKerning: this.fontKerning,
-      textAlign: this.textAlign,
-      textBaseline: this.textBaseline,
-      textDecoration: this.textDecoration,
-      direction: this.direction,
-    }
-  }
-
-  protected override _updateStyle(val: Record<string, any>) {
-    super._updateStyle(val)
-
-    ;[
-      'color',
-      'fontSize',
-      'fontWeight',
-      'fontFamily',
-      'fontStyle',
-      'fontKerning',
-      'textAlign',
-      'textBaseline',
-      'textDecoration',
-      'direction',
-    ].forEach(key => {
-      if (typeof (val as any)[key] !== 'undefined') {
-        (this as any)[key] = (val as any)[key]
-      }
-    })
-  }
+  protected override _style = new LabelStyle(this)
 
   constructor(text: string, style?: Record<string, any>) {
     super(Texture.EMPTY)

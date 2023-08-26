@@ -1,7 +1,10 @@
-import { Color, Transform2D, Vector2 } from '@rubickjs/math'
-import { DEG_TO_RAD, RAD_TO_DEG } from '@rubickjs/shared'
+import { clamp } from '@rubickjs/math'
+import { Color, ColorMatrix } from '@rubickjs/color'
+import { Ref } from '@rubickjs/shared'
+import { CanvasItemStyle } from '../resources'
 import { Node } from './Node'
 import { Viewport } from './Viewport'
+import type { ColorValue } from '@rubickjs/color'
 import type { Effect } from './Effect'
 
 interface RenderFunc {
@@ -14,169 +17,105 @@ interface RenderWithEffectFunc {
 
 export class CanvasItem extends Node {
   /**
-   * Transform relative to parent node
-   */
-  readonly transform = new Transform2D()
-
-  /**
-   * The transform origin is the point around which a transformation is applied
-   *
-   * (0 - 1), (0 - 1)
-   */
-  protected _transformOrigin = new Vector2(0.5, 0.5)
-  get transformOrigin(): Vector2 { return this._transformOrigin }
-  set transformOrigin(val: { x: number; y: number }) { this._transformOrigin.update(val.x, val.y) }
-
-  /**
-   * Size
-   */
-  readonly size = new Vector2(0, 0)
-  get width() { return this.size.x }
-  set width(val) { this.size.x = val }
-  get height() { return this.size.y }
-  set height(val) { this.size.y = val }
-
-  /**
-   * Position relative to parent node
-   */
-  get position(): Vector2 { return this.transform.position }
-  set position(val: { x: number; y: number }) { this.transform.position.update(val.x, val.y) }
-  get x(): number { return this.position.x }
-  set x(val: number) { this.position.x = val }
-  get y(): number { return this.position.y }
-  set y(val: number) { this.position.y = val }
-
-  /**
-   * Scale, unscaled values of this node (1, 1)
-   */
-  get scale(): Vector2 { return this.transform.scale }
-  set scale(val: { x: number; y: number }) { this.transform.scale.update(val.x, val.y) }
-
-  /**
-   * The skew factor for the object in radians.
-   */
-  get skew(): Vector2 { return this.transform.skew }
-  set skew(val: { x: number; y: number }) { this.transform.skew.update(val.x, val.y) }
-
-  /**
-   * The rotation of the object in radians.
-   * 'rotation' and 'angle' have the same effect on a display object; rotation is in radians, angle is in degrees.
-   */
-  get rotation(): number { return this.transform.rotation }
-  set rotation(val) { this.transform.rotation = val }
-
-  /** Background color */
-  protected _backgroundColor = new Color()
-  get backgroundColor() { return this._backgroundColor.value }
-  set backgroundColor(val) { this._backgroundColor.value = val }
-
-  /** CSS style */
-  override get style() { return this._getStyle() }
-  override set style(val) { this._updateStyle(val) }
-
-  /**
    * The viewport associated with this canvas item
    */
   readonly viewport = new Viewport()
 
-  /** Filter */
+  /**
+   * Style
+   */
+  protected _style = new CanvasItemStyle(this)
+  get style() { return this._style }
+  set style(val) { this._style.update(val) }
+
+  /**
+   * Filter
+   */
   filter?: Effect
 
-  /** Animation */
+  /**
+   * Animation
+   */
   animationEnter?: Effect
   animation?: Effect
   animationLeave?: Effect
 
-  /** Transition */
+  /**
+   * Transition
+   */
   transition?: Effect
+
+  /**
+   * Tint
+   */
+  protected _tint = new Color(0xFFFFFF)
+  get tint(): ColorValue { return this._tint.value }
+  set tint(val) { this._tint.value = val }
+
+  /**
+   * Alpha
+   */
+  protected _alpha = new Ref(1)
+  get alpha(): number { return this._alpha.value }
+  set alpha(val) { this._alpha.value = clamp(0, val, 1) }
+
+  /**
+   * Global alpha
+   */
+  protected _globalAlpha = new Ref(this.alpha)
+  get globalAlpha(): number { return this._globalAlpha.value }
+
+  /**
+   * Background color
+   */
+  protected _backgroundColor = new Color(0x00000000)
+  get backgroundColor(): ColorValue { return this._backgroundColor.value }
+  set backgroundColor(val) { this._backgroundColor.value = val }
+
+  /**
+   * Color matrix
+   */
+  readonly colorMatrix = new ColorMatrix()
 
   constructor() {
     super()
-    this.size.onUpdate(this._onUpdateSize.bind(this))
-    this.transformOrigin.onUpdate(this._onUpdateTransformOrigin.bind(this))
+    this._alpha.on('update', this._onUpdateAlpha.bind(this))
   }
 
-  protected _onUpdateSize() {
-    this.addDirty('size')
+  protected _onUpdateAlpha() {
+    this.addDirty('alpha')
   }
 
-  protected _onUpdateTransformOrigin() {
-    this.addDirty('transformOrigin')
-  }
+  /**
+   * Update alpha
+   */
+  updateAlpha(): void {
+    if (this.hasDirty('alpha')) {
+      this.deleteDirty('alpha')
+      if (this.owner instanceof CanvasItem) {
+        this._globalAlpha.value = this.alpha * this.owner.globalAlpha
+      } else {
+        this._globalAlpha.value = this.alpha
+      }
 
-  protected override _getStyle() {
-    const {
-      size,
-      transform: {
-        position,
-        rotation,
-      },
-      transformOrigin,
-    } = this
-
-    return {
-      ...super._getStyle(),
-      left: position[0],
-      top: position[1],
-      width: size[0],
-      height: size[1],
-      rotate: rotation * RAD_TO_DEG,
-      backgroundColor: this.backgroundColor,
-      transformOrigin: `${ transformOrigin[0] }, ${ transformOrigin[1] }`,
-    }
-  }
-
-  protected override _updateStyle(val: Record<string, any>) {
-    super._updateStyle(val)
-
-    const {
-      left,
-      top,
-      width,
-      height,
-      rotate,
-      backgroundColor,
-      transformOrigin,
-    } = val
-
-    const { size, transform } = this
-
-    if (typeof left !== 'undefined' || typeof top !== 'undefined') {
-      const { position } = transform
-      position.update(left ?? position[0], top ?? position[1])
-    }
-
-    if (typeof width !== 'undefined' || typeof height !== 'undefined') {
-      size.update(width ?? size[0], height ?? size[1])
-    }
-
-    if (typeof rotate !== 'undefined') {
-      transform.rotation = rotate * DEG_TO_RAD
-    }
-
-    if (typeof backgroundColor !== 'undefined') {
-      this.backgroundColor = backgroundColor
-    }
-
-    if (typeof transformOrigin !== 'undefined') {
-      const result = transformOrigin.split(',').map((val: string) => Number(val.trim()))
-      this.transformOrigin.update(result[0], result[1])
+      for (let len = this.children.length, i = 0; i < len; i++) {
+        this.children[i].addDirty('alpha')
+      }
     }
   }
 
   override process(delta: number) {
+    this.updateAlpha()
     const currentTime = this.currentTime
-    if (this.isVisible(currentTime)) {
-      const currentViewport = this.currentViewport
-      if (currentViewport) {
-        this._withEffects(currentTime, currentViewport, () => {
-          super.process(delta)
-          this._render(currentTime)
-        })
-      } else {
+    const currentViewport = this.currentViewport
+    if (currentViewport) {
+      this._withEffects(currentTime, currentViewport, () => {
         super.process(delta)
         this._render(currentTime)
-      }
+      })
+    } else {
+      super.process(delta)
+      this._render(currentTime)
     }
   }
 
@@ -202,6 +141,7 @@ export class CanvasItem extends Node {
         render(to)
 
         renderViewport.activate()
+        renderViewport.clear()
         from.texture.activate(0)
         to.texture.activate(1)
 

@@ -19,7 +19,7 @@ import type {
   WebGLTextureUnit,
   WebGLVertexArrayObjectMetadata,
   WebGLVertexArrayObjectOptions,
-  WebGLVertexAttribOptions,
+  WebGLVertexAttrib,
   WebGLViewport,
 } from './WebGL'
 
@@ -861,26 +861,40 @@ export class WebGLRenderer extends Renderer {
     }
   }
 
-  activeVertexAttrib(key: string, options: WebGLVertexAttribOptions, location = 0): void {
-    this.activeBuffer({
-      target: 'array_buffer',
-      value: options.buffer,
-    })
+  activeVertexAttrib(
+    key: string,
+    location: number,
+    attrib: WebGLVertexAttrib,
+    dimension = 1,
+  ): void {
+    const {
+      buffer,
+      size = 0,
+      type = 'float',
+      normalized = false,
+      stride = 0,
+      offset = 0,
+      divisor,
+    } = attrib
 
-    this.gl.enableVertexAttribArray(location)
-    this.gl.vertexAttribPointer(
-      location,
-      options.size ?? 0,
-      this.getBindPoint(options.type ?? 'float'),
-      options.normalized ?? false,
-      options.stride ?? 0,
-      options.offset ?? 0,
-    )
+    this.activeBuffer({ target: 'array_buffer', value: buffer })
+
+    for (let i = 0; i < dimension; i++) {
+      this.gl.enableVertexAttribArray(location + i)
+      this.gl.vertexAttribPointer(
+        location + i,
+        size,
+        this.getBindPoint(type),
+        normalized,
+        stride,
+        offset + (stride - offset) / dimension * i,
+      )
+    }
 
     // ext: instancedArrays
-    if (options.divisor) {
+    if (divisor) {
       if ('vertexAttribDivisor' in this.gl) {
-        this.gl.vertexAttribDivisor(location, options.divisor)
+        this.gl.vertexAttribDivisor(location, divisor)
       } else {
         console.warn('Failed to active vertex array object, GPU Instancing is not supported on this device')
       }
@@ -888,13 +902,7 @@ export class WebGLRenderer extends Renderer {
 
     this.vertexArray.attributes[key] = {
       enable: true,
-      buffer: options.buffer,
-      size: options.size,
-      type: options.type,
-      normalized: options.normalized,
-      stride: options.stride,
-      offset: options.offset,
-      divisor: options.divisor,
+      ...attrib,
     }
   }
 
@@ -962,75 +970,59 @@ export class WebGLRenderer extends Renderer {
     if (options.attributes) {
       const programMetadata = this.getProgramMetadata(program)
       const stride: Record<number, number> = {}
-      const offset: Record<number, number> = {}
-      const attribs = new Map<string, WebGLVertexAttribOptions & {
-        id: number
-        location?: number
-        byteLength: number
-      }>()
-
+      const attributes: Record<string, any> = {}
       for (const key in options.attributes) {
-        const attrib = options.attributes[key]
-
-        // normalization params
-        let buffer, bufferProps: WebGLVertexAttribOptions & WebGLBufferMetadata
-        if ('buffer' in attrib) {
-          buffer = attrib.buffer
-          bufferProps = { ...this.getBufferMetadata(buffer), ...attrib }
+        const value = options.attributes[key]
+        const info = programMetadata.attributes.get(key)
+        let attrib: WebGLVertexAttrib
+        if ('buffer' in value) {
+          attrib = { ...value }
         } else {
-          buffer = attrib
-          bufferProps = { ...this.getBufferMetadata(buffer), buffer }
+          attrib = { buffer: value }
         }
-
-        stride[bufferProps.id] = stride[bufferProps.id] ?? 0
-        offset[bufferProps.id] = offset[bufferProps.id] ?? 0
-
-        const attributeInfo = programMetadata.attributes.get(key)
-        const size = bufferProps.size || (attributeInfo?.size ?? 0)
-        const byteLength = size * (
-          bufferProps.type === 'unsigned_byte'
-            ? 1
-            : bufferProps.type === 'unsigned_short'
-              ? 2
-              : 4
-        )
-        stride[bufferProps.id] += byteLength
-        attribs.set(key, {
-          ...bufferProps,
-          buffer,
-          size,
-          location: attributeInfo?.location,
-          byteLength,
-        })
+        attrib.size = attrib.size || info?.size || 0
+        const metadata = this.getBufferMetadata(attrib.buffer)
+        const dimension = Number(info?.type.match(/mat(\d)/)?.[1] ?? 1)
+        let byteLength
+        switch (attrib.type) {
+          case 'unsigned_byte':
+            byteLength = attrib.size!
+            break
+          case 'unsigned_short':
+            byteLength = attrib.size! * 2
+            break
+          case 'float':
+          default:
+            byteLength = attrib.size! * 4
+            break
+        }
+        byteLength *= dimension
+        stride[metadata.id] ??= 0
+        stride[metadata.id] += byteLength
+        attributes[key] = { attrib, metadata, info, byteLength, dimension }
       }
 
-      attribs.forEach((attrib, key) => {
-        if (attrib.stride === undefined) {
-          if (stride[attrib.id] === attrib.byteLength) {
-            attrib.stride = 0
-          } else {
-            attrib.stride = stride[attrib.id]
-          }
-        }
+      const offset: Record<number, number> = {}
+      for (const key in attributes) {
+        const { attrib, metadata, info, byteLength, dimension } = attributes[key]
 
-        if (attrib.offset === undefined) {
-          attrib.offset = offset[attrib.id]
-          offset[attrib.id] += attrib.byteLength
+        if (info.location !== undefined) {
+          offset[metadata.id] ??= 0
+          attrib.offset ??= offset[metadata.id]
+          attrib.stride ??= stride[metadata.id] === byteLength ? 0 : stride[metadata.id]
+          this.activeVertexAttrib(key, info.location, attrib, dimension)
+          offset[metadata.id] += byteLength
         }
-
-        if (attrib.location !== undefined) {
-          this.activeVertexAttrib(key, attrib, attrib.location)
-        }
-      })
+      }
     }
 
     // active index buffer
+    const elementArrayBuffer = options.elementArrayBuffer ?? null
     this.activeBuffer({
       target: 'element_array_buffer',
-      value: options.elementArrayBuffer ?? null,
+      value: elementArrayBuffer,
     })
-
-    this.vertexArray.elementArrayBuffer = options.elementArrayBuffer ?? null
+    this.vertexArray.elementArrayBuffer = elementArrayBuffer
   }
 
   activeVertexArray(

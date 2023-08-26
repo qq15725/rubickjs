@@ -238,7 +238,10 @@ export class Sprite extends Node2D {
         indices: this.indices,
         uvs: this.uvs,
         texture: (this.filter?.redrawTexture(this.texture, this) ?? this.texture).getRelated(),
-        background: this._backgroundColor.abgr,
+        backgroundColor: this._backgroundColor.abgr,
+        tint: (this.globalAlpha * 255 << 24) + this._tint.bgr,
+        colorMatrix: this.colorMatrix.toMatrix4().toArray(true),
+        colorMatrixOffset: this.colorMatrix.toVector4().toArray(),
       })
     }
   }

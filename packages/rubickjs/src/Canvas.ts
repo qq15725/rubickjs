@@ -1,4 +1,4 @@
-import { Color } from '@rubickjs/math'
+import { Color } from '@rubickjs/color'
 import { WebGLRenderer, setCurrentRenderer } from '@rubickjs/renderer'
 import { SceneTree } from '@rubickjs/scene'
 import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER, createHTMLCanvas } from '@rubickjs/shared'
@@ -191,8 +191,8 @@ export class Canvas extends EventEmitter {
    * Nodes can have any number of children, but every child must have a unique name.
    * Child nodes are automatically deleted when the parent node is deleted, so an entire scene can be removed by deleting its topmost node.
    */
-  addChild<T extends Node, D extends Node>(node: T, previousSibling?: D): boolean {
-    return this.root.addChild(node, previousSibling)
+  appendChild<T extends Node, D extends Node>(node: T, previousSibling?: D): boolean {
+    return this.root.appendChild(node, previousSibling)
   }
 
   /**

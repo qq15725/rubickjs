@@ -1,7 +1,6 @@
 import { Matrix3 } from './Matrix3'
 import { Vector2 } from './Vector2'
-
-const PI_2 = Math.PI * 2
+import { PI_2 } from './utils'
 
 /**
  * Transform2D

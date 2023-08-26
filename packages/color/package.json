@@ -1,15 +1,15 @@
 {
-  "name": "@rubickjs/scene",
+  "name": "@rubickjs/color",
   "version": "0.0.1-beta.1",
-  "description": "Scene for Rubick.js",
+  "description": "Color for Rubick.js",
   "author": "wxm",
   "license": "MIT",
   "keywords": [
     "rubick",
     "rubickjs",
-    "scene"
+    "math"
   ],
-  "homepage": "https://github.com/qq15725/rubickjs/blob/main/packages/scene",
+  "homepage": "https://github.com/qq15725/rubickjs/blob/main/packages/color",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/qq15725/rubickjs.git"
@@ -41,10 +41,7 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "@rubickjs/color": "workspace:*",
-    "@rubickjs/input": "workspace:*",
-    "@rubickjs/math": "workspace:*",
-    "@rubickjs/renderer": "workspace:*",
+    "colord": "^2.9.3",
     "@rubickjs/shared": "workspace:*"
   },
   "publishConfig": {

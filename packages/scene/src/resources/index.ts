@@ -1,5 +1,6 @@
 export * from './geometries'
 export * from './materials'
+export * from './styles'
 export * from './textures'
 
 export * from './Attribute'

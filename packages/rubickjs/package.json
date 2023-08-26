@@ -45,6 +45,7 @@
   "types": "dist/index.d.ts",
   "dependencies": {
     "@rubickjs/assets": "workspace:*",
+    "@rubickjs/color": "workspace:*",
     "@rubickjs/input": "workspace:*",
     "@rubickjs/math": "workspace:*",
     "@rubickjs/renderer": "workspace:*",

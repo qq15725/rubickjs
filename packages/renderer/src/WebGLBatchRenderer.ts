@@ -1,14 +1,16 @@
 import { uid } from '@rubickjs/shared'
+import type { WebGLDrawOptions, WebGLVertexArrayObjectOptions, WebGLVertexAttrib } from './WebGL'
 import type { WebGLRenderer } from './WebGLRenderer'
-import type { WebGLDrawOptions, WebGLVertexArrayObjectOptions } from './WebGL'
 
 export interface Batchable {
   texture: WebGLTexture
   vertices: ArrayLike<number>
   indices: ArrayLike<number>
   uvs: ArrayLike<number>
+  backgroundColor?: number
   tint?: number
-  background?: number
+  colorMatrix?: ArrayLike<number>
+  colorMatrixOffset?: ArrayLike<number>
 }
 
 type DrawCall = WebGLDrawOptions & {
@@ -22,37 +24,49 @@ interface Shader {
 }
 
 export class WebGLBatchRenderer {
-  renderer: WebGLRenderer
   batchSize = 4096 * 4
-
   batchables: Batchable[] = []
   vertexCount = 0
   indexCount = 0
 
   /**
-   * Size of data being buffered per vertex in the
-   * attribute buffers (in floats). By default, the
-   * batch-renderer uses 7:
-   *
-   * | position       | 2 |
-   * | uv             | 2 |
-   * | tint           | 1 |
-   * | background     | 1 |
-   * | textureId      | 1 |
+   * Size of data being buffered per vertex in the attribute buffers
    */
-  protected vertexSize = 7
-  protected attributeBuffer: Array<ArrayBuffer> = []
-  protected indexBuffers: Array<Uint16Array> = []
-  protected shaders = new Map<number, Shader>()
+  protected _attributes: Record<string, Partial<WebGLVertexAttrib>> = {
+    aTextureId: { size: 1, normalized: true, type: 'float' }, // 1
+    aPosition: { size: 2, normalized: false, type: 'float' }, // 2
+    aUv: { size: 2, normalized: false, type: 'float' }, // 2
+    aTint: { size: 4, normalized: true, type: 'unsigned_byte' }, // 1
+    aBackgroundColor: { size: 4, normalized: true, type: 'unsigned_byte' }, // 1
+    aColorMatrixOffset: { size: 4, normalized: false, type: 'float' }, // 4
+    aColorMatrix: { size: 4, normalized: false, type: 'float' }, // 16
+  }
 
-  constructor(renderer: WebGLRenderer) {
-    this.renderer = renderer
+  protected _vertexSize = 1 + 2 + 2 + 1 + 1 + 4 + 16
+  protected _attributeBuffer: Array<ArrayBuffer> = []
+  protected _indexBuffers: Array<Uint16Array> = []
+  protected _shaders = new Map<number, Shader>()
+  protected _defaultTint = 0xFFFFFFFF
+  protected _defaultBackgroundColor = 0x00000000
+  protected _defaultColorMatrix = [
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1,
+  ]
+
+  protected _defaultColorMatrixOffset = [0, 0, 0, 0]
+
+  constructor(
+    public renderer: WebGLRenderer,
+  ) {
+    //
   }
 
   getShader(maxTextures: number) {
-    let shader = this.shaders.get(maxTextures)
+    let shader = this._shaders.get(maxTextures)
     if (!shader) {
-      this.shaders.set(maxTextures, shader = this.createShader(maxTextures))
+      this._shaders.set(maxTextures, shader = this.createShader(maxTextures))
     }
     return shader
   }
@@ -60,34 +74,42 @@ export class WebGLBatchRenderer {
   createShader(maxTextures: number) {
     const program = this.renderer.createProgram({
       vert: `precision highp float;
+attribute float aTextureId;
 attribute vec2 aPosition;
 attribute vec2 aUv;
 attribute vec4 aTint;
-attribute vec4 aBackground;
-attribute float aTextureId;
+attribute vec4 aBackgroundColor;
+attribute mat4 aColorMatrix;
+attribute vec4 aColorMatrixOffset;
 
 uniform mat3 projectionMatrix;
 uniform mat3 translationMatrix;
 uniform vec4 tint;
 
+varying float vTextureId;
 varying vec2 vUv;
 varying vec4 vTint;
-varying vec4 vBackground;
-varying float vTextureId;
+varying vec4 vBackgroundColor;
+varying mat4 vColorMatrix;
+varying vec4 vColorMatrixOffset;
 
 void main(void) {
+  vTextureId = aTextureId;
   gl_Position = vec4((projectionMatrix * translationMatrix * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
-
   vUv = aUv;
   vTint = aTint * tint;
-  vBackground = aBackground;
-  vTextureId = aTextureId;
+  vBackgroundColor = aBackgroundColor;
+  vColorMatrix = aColorMatrix;
+  vColorMatrixOffset = aColorMatrixOffset;
 }`,
       frag: `precision highp float;
+varying float vTextureId;
 varying vec2 vUv;
 varying vec4 vTint;
-varying vec4 vBackground;
-varying float vTextureId;
+varying vec4 vBackgroundColor;
+varying mat4 vColorMatrix;
+varying vec4 vColorMatrixOffset;
+
 uniform sampler2D samplers[${ maxTextures }];
 
 void main(void) {
@@ -102,7 +124,14 @@ ${ Array.from({ length: maxTextures }, (_, i) => {
         }
         return `${ text }\n  {\n    color = texture2D(samplers[${ i }], vUv);\n  }`
       }).join('') }
-  gl_FragColor = (color + (1.0 - color.a) * vBackground) * vTint;
+
+  color *= vTint;
+  color += (1.0 - color.a) * vBackgroundColor;
+  color = vColorMatrix * color;
+  if (color.a > 0.0) {
+    color += vColorMatrixOffset;
+  }
+  gl_FragColor = color;
 }`,
     })
 
@@ -119,13 +148,10 @@ ${ Array.from({ length: maxTextures }, (_, i) => {
     })
 
     const vertexArray: WebGLVertexArrayObjectOptions = {
-      attributes: {
-        aPosition: { buffer, size: 2, normalized: false, type: 'float' },
-        aUv: { buffer, size: 2, normalized: false, type: 'float' },
-        aTint: { buffer, size: 4, normalized: true, type: 'unsigned_byte' },
-        aBackground: { buffer, size: 4, normalized: true, type: 'unsigned_byte' },
-        aTextureId: { buffer, size: 1, normalized: true, type: 'float' },
-      },
+      attributes: Object.fromEntries(
+        Object.entries(this._attributes)
+          .map(([key, value]) => [key, { ...value, buffer }]),
+      ),
       elementArrayBuffer,
     }
 
@@ -218,16 +244,31 @@ ${ Array.from({ length: maxTextures }, (_, i) => {
         textureCount = 0
         drawCall.first = iIndex
         for (let i = start; i <= end; i++) {
-          const { indices, vertices, uvs, texture, tint, background } = batchables[i]
-          const iIndexStart = aIndex / this.vertexSize
+          const {
+            indices,
+            vertices,
+            uvs,
+            texture,
+            tint = this._defaultTint,
+            backgroundColor = this._defaultBackgroundColor,
+            colorMatrix = this._defaultColorMatrix,
+            colorMatrixOffset = this._defaultColorMatrixOffset,
+          } = batchables[i]
+          const iIndexStart = aIndex / this._vertexSize
           for (let len = vertices.length, i = 0; i < len; i += 2) {
+            float32View[aIndex++] = (texture as any)._drawCallTextureUnit
             float32View[aIndex++] = vertices[i]
             float32View[aIndex++] = vertices[i + 1]
             float32View[aIndex++] = uvs[i]
             float32View[aIndex++] = uvs[i + 1]
-            uint32View[aIndex++] = tint ?? 4294967295
-            uint32View[aIndex++] = background ?? 0
-            float32View[aIndex++] = (texture as any)._drawCallTextureUnit
+            uint32View[aIndex++] = tint
+            uint32View[aIndex++] = backgroundColor
+            for (let i = 0; i < 4; i++) {
+              float32View[aIndex++] = colorMatrixOffset[i] ?? 0
+            }
+            for (let i = 0; i < 16; i++) {
+              float32View[aIndex++] = colorMatrix[i] ?? 0
+            }
           }
           for (let len = indices.length, i = 0; i < len; i++) {
             indexBuffer[iIndex++] = iIndexStart + indices[i]
@@ -271,7 +312,7 @@ ${ Array.from({ length: maxTextures }, (_, i) => {
   }
 
   /**
-   * Fetches an attribute buffer from `this.attributeBuffer` that can hold atleast `size` floats.
+   * Fetches an attribute buffer from `this._attributeBuffer` that can hold atleast `size` floats.
    * @param size - minimum capacity required
    * @returns - buffer than can hold atleast `size` floats
    */
@@ -281,21 +322,21 @@ ${ Array.from({ length: maxTextures }, (_, i) => {
     const roundedSizeIndex = log2(roundedP2)
     const roundedSize = roundedP2 * 8
 
-    if (this.attributeBuffer.length <= roundedSizeIndex) {
-      this.indexBuffers.length = roundedSizeIndex + 1
+    if (this._attributeBuffer.length <= roundedSizeIndex) {
+      this._indexBuffers.length = roundedSizeIndex + 1
     }
 
-    let buffer = this.attributeBuffer[roundedSize]
+    let buffer = this._attributeBuffer[roundedSize]
 
     if (!buffer) {
-      this.attributeBuffer[roundedSize] = buffer = new ArrayBuffer(roundedSize * this.vertexSize * 4)
+      this._attributeBuffer[roundedSize] = buffer = new ArrayBuffer(roundedSize * this._vertexSize * 4)
     }
 
     return buffer
   }
 
   /**
-   * Fetches an index buffer from `this.indexBuffers` that can
+   * Fetches an index buffer from `this._indexBuffers` that can
    * have at least `size` capacity.
    * @param size - minimum required capacity
    * @returns - buffer that can fit `size` indices.
@@ -306,14 +347,14 @@ ${ Array.from({ length: maxTextures }, (_, i) => {
     const roundedSizeIndex = log2(roundedP2)
     const roundedSize = roundedP2 * 12
 
-    if (this.indexBuffers.length <= roundedSizeIndex) {
-      this.indexBuffers.length = roundedSizeIndex + 1
+    if (this._indexBuffers.length <= roundedSizeIndex) {
+      this._indexBuffers.length = roundedSizeIndex + 1
     }
 
-    let buffer = this.indexBuffers[roundedSizeIndex]
+    let buffer = this._indexBuffers[roundedSizeIndex]
 
     if (!buffer) {
-      this.indexBuffers[roundedSizeIndex] = buffer = new Uint16Array(roundedSize)
+      this._indexBuffers[roundedSizeIndex] = buffer = new Uint16Array(roundedSize)
     }
 
     return buffer

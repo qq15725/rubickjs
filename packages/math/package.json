@@ -40,9 +40,6 @@
   "unpkg": "dist/index.umd.min.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
-  "dependencies": {
-    "colord": "^2.9.3"
-  },
   "publishConfig": {
     "access": "public"
   }

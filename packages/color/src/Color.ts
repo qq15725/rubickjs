@@ -1,5 +1,6 @@
 import { colord } from 'colord'
 import { Ref } from '@rubickjs/shared'
+import { clamp } from '@rubickjs/math'
 import type {
   AnyColor,
   HslColor,
@@ -17,30 +18,22 @@ export type ColorValue =
 const HEX_PATTERN = /^(#|0x)?(([a-f0-9]{3}){1,2}([a-f0-9]{2})?)$/i
 
 export class Color extends Ref<ColorValue> {
+  r!: number
+  g!: number
+  b!: number
+  a!: number
   get r8(): number { return this.r * 255 & 0xFF }
   get g8(): number { return this.g * 255 & 0xFF }
   get b8(): number { return this.b * 255 & 0xFF }
   get a8(): number { return this.a * 255 & 0xFF }
   get rgb(): number { return (this.r8 << 16) + (this.g8 << 8) + this.b8 }
-  get abgr(): number { return this.a * 4278190080 + (this.b8 << 16) + (this.g8 << 8) + this.r8 }
+  get bgr(): number { return (this.b8 << 16) + (this.g8 << 8) + this.r8 }
+  get abgr(): number { return (this.a8 << 24) + this.bgr }
 
-  constructor(
-    public r = 0,
-    public g = 0,
-    public b = 0,
-    public a = 0,
-  ) {
-    super([r, g, b, a])
-
+  constructor(value: ColorValue = 0x00000000) {
+    super(value)
+    this._normalize(value)
     this.on('update', this._normalize.bind(this))
-  }
-
-  set(r = 0, g = 0, b = 0, a = 0): this {
-    this.r = r
-    this.g = g
-    this.b = b
-    this.a = a
-    return this
   }
 
   round(steps: number): this {
@@ -56,24 +49,29 @@ export class Color extends Ref<ColorValue> {
     let b: number | undefined
     let a: number | undefined
 
-    const clamp = (value: number, min = 0, max = 1) => Math.min(Math.max(value, min), max)
-
-    if (typeof value === 'number' && value >= 0 && value <= 0xFFFFFF) {
-      const int = value as number
-      r = clamp(((int >> 16) & 0xFF) / 255)
-      g = clamp(((int >> 8) & 0xFF) / 255)
-      b = clamp((int & 0xFF) / 255)
-      a = 1.0
+    if (value === 0) {
+      r = g = b = a = 0
+    } else if (typeof value === 'number') {
+      let int = value
+      if (value > 0xFFFFFF) {
+        a = clamp(0, ((int >>> 24) & 0xFF) / 255, 1)
+        int = value - (a * 255 << 24)
+      } else {
+        a = 1.0
+      }
+      r = clamp(0, ((int >>> 16) & 0xFF) / 255, 1)
+      g = clamp(0, ((int >>> 8) & 0xFF) / 255, 1)
+      b = clamp(0, (int & 0xFF) / 255, 1)
     } else if (
       (Array.isArray(value) || value instanceof Float32Array || value instanceof Float64Array)
       && value.length >= 3 && value.length <= 4
     ) {
-      [r, g, b, a = 1.0] = value.map(val => clamp(val))
+      [r, g, b, a = 1.0] = value.map(val => clamp(0, val, 1))
     } else if (
       (value instanceof Uint8Array || value instanceof Uint8ClampedArray)
       && value.length >= 3 && value.length <= 4
     ) {
-      [r, g, b, a = 255] = value.map(val => clamp(val, 0, 255))
+      [r, g, b, a = 255] = value.map(val => clamp(0, val, 255))
       r /= 255
       g /= 255
       b /= 255
@@ -107,7 +105,7 @@ export class Color extends Ref<ColorValue> {
 
   toArgb(alpha = this.a, applyToRGB = true): number {
     if (alpha === 1.0) {
-      return 4278190080 + this.rgb
+      return (0xFF << 24) + this.rgb
     }
 
     if (alpha === 0.0) {
@@ -124,7 +122,7 @@ export class Color extends Ref<ColorValue> {
       b = ((b * alpha) + 0.5) | 0
     }
 
-    return alpha * 4278190080 + (r << 16) + (g << 8) + b
+    return (alpha * 255 << 24) + (r << 16) + (g << 8) + b
   }
 
   toHex(): string {

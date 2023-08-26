@@ -19,10 +19,22 @@ export abstract class Matrix extends Float64Array {
     if (array) {
       this.set(array)
     } else {
-      for (let i = 0; i < rows; i++) {
-        this[i * cols + i] = 1
+      this.identity()
+    }
+  }
+
+  /**
+   * Resets this Matrix to an identity (default) matrix.
+   */
+  identity(): this {
+    for (let x = 0; x < this.cols; x++) {
+      for (let y = 0; y < this.rows; y++) {
+        const iy = y * this.cols
+        const i = x + iy
+        this[i] = y + iy === i ? 1 : 0
       }
     }
+    return this
   }
 
   protected _operate(
@@ -67,13 +79,14 @@ export abstract class Matrix extends Float64Array {
       if (operator === '*') {
         for (let x = 0; x < cols; x++) {
           for (let y = 0; y < rows; y++) {
+            const iy = y * cols
             let sum = 0
             for (let i = 0; i < rows; i++) {
-              const a = y * cols + i
+              const a = iy + i
               const b = i * cols + x
-              sum += this[a] * (isNumber ? value : value[b])
+              sum += (this[a] ?? 0) * (isNumber ? value : (value[b] ?? 0))
             }
-            result[y * cols + x] = sum
+            result[iy + x] = sum
           }
         }
       } else {

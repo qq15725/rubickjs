@@ -1,5 +1,5 @@
 import type { Timeline } from '@rubickjs/scene'
-import type { ColorValue } from '@rubickjs/math'
+import type { ColorValue } from '@rubickjs/color'
 
 export interface CanvasOptions extends WebGLContextAttributes {
   view?: HTMLCanvasElement | null

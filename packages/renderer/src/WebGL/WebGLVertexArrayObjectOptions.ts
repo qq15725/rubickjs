@@ -1,10 +1,10 @@
-import type { WebGLVertexAttribOptions } from './WebGLVertexAttribOptions'
+import type { WebGLVertexAttrib } from './WebGLVertexAttrib'
 
 export interface WebGLVertexArrayObjectOptions {
   /**
    * Vertex attributes
    */
-  attributes?: Record<string, WebGLBuffer | WebGLVertexAttribOptions>
+  attributes?: Record<string, WebGLBuffer | WebGLVertexAttrib>
 
   /**
    * Index buffer

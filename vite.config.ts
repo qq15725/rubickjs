@@ -5,6 +5,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@rubickjs/assets', replacement: resolve('./packages/assets/src') },
+      { find: '@rubickjs/color', replacement: resolve('./packages/color/src') },
       { find: '@rubickjs/input', replacement: resolve('./packages/input/src') },
       { find: '@rubickjs/math', replacement: resolve('./packages/math/src') },
       { find: '@rubickjs/renderer', replacement: resolve('./packages/renderer/src') },

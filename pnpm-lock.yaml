@@ -63,17 +63,22 @@ importers:
         specifier: workspace:*
         version: link:../scene
 
+  packages/color:
+    dependencies:
+      '@rubickjs/shared':
+        specifier: workspace:*
+        version: link:../shared
+      colord:
+        specifier: ^2.9.3
+        version: 2.9.3
+
   packages/input:
     dependencies:
       '@rubickjs/shared':
         specifier: workspace:*
         version: link:../shared
 
-  packages/math:
-    dependencies:
-      colord:
-        specifier: ^2.9.3
-        version: 2.9.3
+  packages/math: {}
 
   packages/renderer:
     dependencies:
@@ -86,6 +91,9 @@ importers:
       '@rubickjs/assets':
         specifier: workspace:*
         version: link:../assets
+      '@rubickjs/color':
+        specifier: workspace:*
+        version: link:../color
       '@rubickjs/input':
         specifier: workspace:*
         version: link:../input
@@ -104,6 +112,9 @@ importers:
 
   packages/scene:
     dependencies:
+      '@rubickjs/color':
+        specifier: workspace:*
+        version: link:../color
       '@rubickjs/input':
         specifier: workspace:*
         version: link:../input
