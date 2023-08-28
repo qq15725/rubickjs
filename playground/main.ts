@@ -20,13 +20,21 @@ text.on('process', (delta: number) => {
   text.y = 100
   text.rotation += 0.005 * delta
 })
-canvas.addChild(text)
+canvas.appendChild(text)
 
-const bunny = new Sprite(Assets.load('https://pixijs.com/assets/bunny.png'))
+const texture = Assets.load('https://pixijs.com/assets/bunny.png')
+canvas.appendChild(new Sprite(texture))
+
+const bunny = new Sprite(texture)
+// bunny.colorFilter.hueRotate(Math.PI / 2)
+window.bunny = bunny
+console.log(bunny.colorFilter)
 bunny.on('process', (delta: number) => {
   bunny.x = canvas.width / 2 - bunny.width / 2
   bunny.y = canvas.height / 2 - bunny.height / 2
   bunny.rotation += 0.001 * delta
 })
-canvas.addChild(bunny)
+canvas.appendChild(bunny)
 canvas.start()
+
+window.canvas = canvas
