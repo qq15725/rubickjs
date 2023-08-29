@@ -1,6 +1,8 @@
-import { QuadUvGeometry, Timeline } from '../resources'
+import { QuadUvGeometry } from '../resources'
 import { Viewport } from './Viewport'
 import { MainLoop } from './MainLoop'
+import { Timer } from './Timer'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
 
 export class SceneTree extends MainLoop {
@@ -12,18 +14,12 @@ export class SceneTree extends MainLoop {
   /**
    * Global timeline
    */
-  readonly timeline: Timeline
+  readonly timeline = new Timer()
 
   /**
    * The currently active viewport
    */
-  viewport?: Viewport
-
-  constructor(timeline = new Timeline()) {
-    super()
-
-    this.timeline = timeline
-  }
+  activeViewport?: Viewport
 
   /**
    * Handle input evnet
@@ -35,22 +31,37 @@ export class SceneTree extends MainLoop {
   }
 
   /**
-   * Process each frame
+   * Process root node status updates before rendering
    *
    * @param delta
    */
   process(delta: number): void {
     this.timeline.addTime(delta)
-
-    // draw scene tree to root viewport
     this.root.process(delta)
+  }
 
-    // draw quad texture to screen
-    const { x: width, y: height } = this.root.size
-    const renderer = this.renderer
-    renderer.updateViewport(0, 0, width * renderer.pixelRatio, height * renderer.pixelRatio)
+  /**
+   * Render root node to screen
+   */
+  render(renderer: WebGLRenderer): void {
+    this.root.render(renderer)
+    this._renderToScreen(renderer)
+  }
+
+  /**
+   * Render to screen
+   * @param renderer
+   * @protected
+   */
+  protected _renderToScreen(renderer: WebGLRenderer) {
+    const [width, height] = this.root.projection.size
+    renderer.updateViewport(
+      0, 0,
+      width * renderer.pixelRatio,
+      height * renderer.pixelRatio,
+    )
     renderer.clear()
-    this.root.texture.activate(0)
-    QuadUvGeometry.draw()
+    this.root.texture.activate(renderer, 0)
+    QuadUvGeometry.draw(renderer)
   }
 }

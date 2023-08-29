@@ -1,4 +1,5 @@
-import { Resouce } from '../main/Resouce'
+import { Resouce } from '@rubickjs/shared'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 
 export class Material extends Resouce {
   static instance = new this()
@@ -38,9 +39,7 @@ void main(void) {
     this.frag = propsData?.frag ?? this.frag
   }
 
-  getRelated(): WebGLProgram {
-    const renderer = this.renderer
-
+  glProgram(renderer: WebGLRenderer): WebGLProgram {
     return renderer.getRelated(this, () => {
       let vert = this.vert
       let frag = this.frag
@@ -50,12 +49,8 @@ void main(void) {
     })
   }
 
-  activate(uniforms?: Record<string, any>): void {
-    const renderer = this.renderer
-
-    const related = this.getRelated()
-
-    renderer.activeProgram(related)
+  activate(renderer: WebGLRenderer, uniforms?: Record<string, any>): void {
+    renderer.activeProgram(this.glProgram(renderer))
 
     if (uniforms || this.uniforms.size > 0) {
       renderer.updateUniforms({

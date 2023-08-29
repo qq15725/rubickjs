@@ -1,6 +1,6 @@
-import { Resouce } from '../main/Resouce'
+import { Node } from './Node'
 
-export class Timeline extends Resouce {
+export class Timer extends Node {
   /**
    * Start time
    */
@@ -16,20 +16,22 @@ export class Timeline extends Resouce {
    */
   currentTime = 0
 
-  /**
-   * Enable loop
-   */
-  loop = false
-
-  constructor(range: number | null | Array<number> = null, loop = false) {
+  constructor(
+    range: number | null | Array<number> = null,
+    public loop = false,
+  ) {
     super()
-    if (Array.isArray(range)) {
-      this.startTime = range[0]
-      this.endTime = range[1] ?? Number.MAX_SAFE_INTEGER
-    } else {
-      this.endTime = range ?? Number.MAX_SAFE_INTEGER
-    }
-    this.loop = loop
+
+    ;(
+      [
+        this.startTime = 0,
+        this.endTime = Number.MAX_SAFE_INTEGER,
+      ] = range
+        ? Array.isArray(range)
+          ? range
+          : [0, range]
+        : []
+    )
   }
 
   /**
@@ -48,5 +50,6 @@ export class Timeline extends Resouce {
       time = Math.min(time, this.endTime)
     }
     this.currentTime = time
+    this.emit('update', delta)
   }
 }

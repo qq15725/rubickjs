@@ -1,6 +1,7 @@
 import { Projection2D } from '@rubickjs/math'
 import { QuadUvGeometry, UvMaterial, ViewportTexture } from '../resources'
 import { Node } from './Node'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { Vector2 } from '@rubickjs/math'
 
 export class Viewport extends Node {
@@ -51,65 +52,58 @@ export class Viewport extends Node {
     this.projection = new Projection2D(0, 0, 0, 0, flipY)
   }
 
-  getFramebufferProps() {
+  glFramebufferProps(renderer: WebGLRenderer) {
     return {
-      colorTextures: [this.texture.getRelated()],
+      colorTextures: [this.texture.glTexture(renderer)],
     }
   }
 
-  getRelated() {
-    const renderer = this.renderer
+  glFramebuffer(renderer: WebGLRenderer): WebGLFramebuffer {
     return renderer.getRelated(this.framebuffers[this.framebuffer], () => {
-      return renderer.createFramebuffer(this.getFramebufferProps())
+      return renderer.createFramebuffer(
+        this.glFramebufferProps(renderer),
+      )
     })
   }
 
-  update() {
+  update(renderer: WebGLRenderer) {
     this.clearDirty()
-    this.renderer.updateFramebuffer(this.getRelated(), this.getFramebufferProps())
-  }
-
-  /**
-   * Clear current viewport
-   */
-  clear() {
-    this.renderer.clear()
+    renderer.updateFramebuffer(
+      this.glFramebuffer(renderer),
+      this.glFramebufferProps(renderer),
+    )
   }
 
   /**
    * Activate viewport
-   *
-   * @param then
    */
-  activate(then?: () => void | false) {
-    const renderer = this.renderer
-
+  activate(renderer: WebGLRenderer, then?: () => void | false) {
     // flush batch render
     renderer.flush()
 
     // bind current viewport to scene tree
     const tree = this.tree
-    const oldViewport = tree?.viewport
+    const oldViewport = tree?.activeViewport
     if (tree) {
-      tree.viewport = this
+      tree.activeViewport = this
     }
 
     // active WebGL framebuffer
-    renderer.activeFramebuffer(this.getRelated(), () => {
-      const { x: width, y: height } = this.size
+    renderer.activeFramebuffer(this.glFramebuffer(renderer), () => {
+      const [width, height] = this.size
 
       // update textures
       this.framebuffers.forEach(framebuffer => {
         framebuffer.texture.pixelRatio = renderer.pixelRatio
         framebuffer.texture.size.update(width, height)
         if (framebuffer.texture.isDirty) {
-          framebuffer.texture.update()
+          framebuffer.texture.upload(renderer)
         }
       })
 
       // update WebGL framebuffer
       if (this.isDirty) {
-        this.update()
+        this.update(renderer)
       }
 
       renderer.updateViewport(
@@ -124,7 +118,7 @@ export class Viewport extends Node {
       if (result === false) {
         renderer.flush()
         if (tree) {
-          tree.viewport = oldViewport
+          tree.activeViewport = oldViewport
         }
       }
 
@@ -135,11 +129,12 @@ export class Viewport extends Node {
   /**
    * Redraw current viewport
    *
+   * @param renderer
    * @param cb
    */
-  redraw(cb: () => void) {
+  redraw(renderer: WebGLRenderer, cb: () => void) {
     // flush batch render
-    this.renderer.flush()
+    renderer.flush()
 
     // current framebuffer index
     const index = this.framebuffer
@@ -151,11 +146,11 @@ export class Viewport extends Node {
     this.framebuffer = (index + 1) % this.framebuffers.length
 
     // active viewport
-    this.activate()
-    this.clear()
+    this.activate(renderer)
+    renderer.clear()
 
     // active texture
-    texture.activate(0)
+    texture.activate(renderer, 0)
 
     // call calback
     cb()
@@ -164,14 +159,15 @@ export class Viewport extends Node {
   /**
    * Copy target viewport to current viewport
    *
+   * @param renderer
    * @param target
    */
-  copy(target: Viewport): void {
+  copy(renderer: WebGLRenderer, target: Viewport): void {
     this.size = target.size
-    this.activate()
-    this.clear()
-    target.texture.activate(0)
-    QuadUvGeometry.draw(UvMaterial.instance, {
+    this.activate(renderer)
+    renderer.clear()
+    target.texture.activate(renderer, 0)
+    QuadUvGeometry.draw(renderer, UvMaterial.instance, {
       sampler: 0,
     })
   }
@@ -179,12 +175,12 @@ export class Viewport extends Node {
   /**
    * Process each frame
    *
-   * @param delta
+   * @param renderer
    */
-  process(delta: number): void {
-    this.activate(() => {
-      this.clear()
-      super.process(delta)
+  override render(renderer: WebGLRenderer): void {
+    this.activate(renderer, () => {
+      renderer.clear()
+      super.render(renderer)
       return false
     })
   }

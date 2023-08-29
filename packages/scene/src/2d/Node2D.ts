@@ -81,26 +81,29 @@ export class Node2D extends CanvasItem {
    * Update transform
    */
   updateTransform(): void {
-    const transform = this.transform
+    const lt = this.transform
+    const pt = (this.parentNode as Node2D)?.globalTransform as Transform2D | undefined
 
-    if (transform.update() || this.hasDirty('transform')) {
-      this.deleteDirty('transform')
+    if (lt.update() || (pt && pt.dirty)) {
+      const gt = this.globalTransform.copy(lt)
+      if (pt) {
+        gt[0] = (lt[0] * pt[0]) + (lt[3] * pt[1])
+        gt[3] = (lt[0] * pt[3]) + (lt[3] * pt[4])
+        gt[1] = (lt[1] * pt[0]) + (lt[4] * pt[1])
+        gt[4] = (lt[1] * pt[3]) + (lt[4] * pt[4])
+        gt[2] = (lt[2] * pt[0]) + (lt[5] * pt[1]) + pt[2]
+        gt[5] = (lt[2] * pt[3]) + (lt[5] * pt[4]) + pt[5]
+        gt.sync()
+      }
 
-      const globalTransform = this.globalTransform.copy(transform)
-      if (this.owner instanceof Node2D) {
-        const ownerPosition = this.owner.transform.position
-        if (ownerPosition.x || ownerPosition.y) {
-          globalTransform.position.update(
-            globalTransform.position.x + ownerPosition.x,
-            globalTransform.position.y + ownerPosition.y,
-          )
-          globalTransform.update()
+      gt.dirty = true
+      for (let len = this.childNodes.length, i = 0; i < len; i++) {
+        const child = this.childNodes[i]
+        if (child instanceof Node2D) {
+          child.updateTransform()
         }
       }
-
-      for (let len = this.children.length, i = 0; i < len; i++) {
-        this.children[i].addDirty('transform')
-      }
+      gt.dirty = false
 
       this._onUpdateTransform()
     }
@@ -109,8 +112,8 @@ export class Node2D extends CanvasItem {
   /** Can override */
   protected _onUpdateTransform() {}
 
-  override process(delta: number) {
+  protected override _process(delta: number) {
+    super._process(delta)
     this.updateTransform()
-    super.process(delta)
   }
 }

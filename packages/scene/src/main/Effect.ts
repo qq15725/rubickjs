@@ -1,6 +1,7 @@
 import { EffectMaterial, QuadUvGeometry } from '../resources'
 import { Node } from './Node'
 import { Viewport } from './Viewport'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { CanvasItem } from './CanvasItem'
 import type { Texture } from '../resources'
 
@@ -120,9 +121,9 @@ export class Effect extends Node {
   /**
    * Process each frame
    *
-   * @param delta
+   * @param renderer
    */
-  process(delta: number) {
+  render(renderer: WebGLRenderer) {
     if (this.disabled || !this.isVisible()) {
       return
     }
@@ -134,38 +135,38 @@ export class Effect extends Node {
       case EffectFlags.DEFAULT:
         if (oldViewport) {
           viewport.size.update(oldViewport.width, oldViewport.height)
-          viewport.copy(oldViewport)
+          viewport.copy(renderer, oldViewport)
         } else {
-          viewport.activate()
+          viewport.activate(renderer)
         }
-        super.process(delta)
-        this.apply(viewport, {
+        super.render(renderer)
+        this.apply(renderer, viewport, {
           redraw: true,
         })
         if (oldViewport) {
-          oldViewport.activate()
-          viewport.texture.activate(0)
-          QuadUvGeometry.draw()
+          oldViewport.activate(renderer)
+          viewport.texture.activate(renderer, 0)
+          QuadUvGeometry.draw(renderer)
         }
         break
       case EffectFlags.BEFORE:
-        super.process(delta)
-        oldViewport && this.apply(oldViewport, {
+        super.render(renderer)
+        oldViewport && this.apply(renderer, oldViewport, {
           redraw: true,
         })
         break
       case EffectFlags.COPY_BEFORE:
         if (oldViewport) {
           viewport.size.update(oldViewport.width, oldViewport.height)
-          viewport.copy(oldViewport)
+          viewport.copy(renderer, oldViewport)
         } else {
-          viewport.activate()
+          viewport.activate(renderer)
         }
-        super.process(delta)
-        this.apply(viewport, {
+        super.render(renderer)
+        this.apply(renderer, viewport, {
           redraw: true,
         })
-        oldViewport?.activate()
+        oldViewport?.activate(renderer)
         break
     }
   }
@@ -173,39 +174,40 @@ export class Effect extends Node {
   /**
    * Apply effect to texture
    */
-  redrawTexture(texture: Texture, node: CanvasItem): Texture | undefined {
+  redrawTexture(renderer: WebGLRenderer, texture: Texture, node: CanvasItem): Texture | undefined {
     if (this.disabled) {
       return undefined
     }
     const oldViewport = node.currentViewport
     const viewport = this.viewport
     viewport.size = texture.size
-    viewport.activate()
-    viewport.clear()
-    texture.activate(0)
-    QuadUvGeometry.draw()
-    this.apply(viewport, {
+    viewport.activate(renderer)
+    renderer.clear()
+    texture.activate(renderer, 0)
+    QuadUvGeometry.draw(renderer)
+    this.apply(renderer, viewport, {
       redraw: true,
       target: node,
     })
-    oldViewport?.activate()
+    oldViewport?.activate(renderer)
     return viewport.texture
   }
 
   /**
    * Apply effect
    *
+   * @param renderer
    * @param viewport Render the target viewport
    * @param context
    */
-  apply(viewport: Viewport, context?: EffectContext): void {
+  apply(renderer: WebGLRenderer, viewport: Viewport, context?: EffectContext): void {
     if (this.disabled || !this.material) return
 
     const progress = (context?.time ?? 0) / this.duration
 
     if (context?.redraw) {
-      viewport.redraw(() => {
-        QuadUvGeometry.draw(this.material!, {
+      viewport.redraw(renderer, () => {
+        QuadUvGeometry.draw(renderer, this.material!, {
           from: 0,
           to: 1,
           progress,
@@ -213,7 +215,7 @@ export class Effect extends Node {
         })
       })
     } else {
-      QuadUvGeometry.draw(this.material, {
+      QuadUvGeometry.draw(renderer, this.material, {
         from: 0,
         to: 1,
         progress,

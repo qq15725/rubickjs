@@ -1,4 +1,4 @@
-import { Resouce } from './Resouce'
+import { Resouce } from '@rubickjs/shared'
 
 export abstract class MainLoop extends Resouce {
   /**

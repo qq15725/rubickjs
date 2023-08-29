@@ -1,11 +1,11 @@
 import { Color } from '@rubickjs/color'
-import { WebGLRenderer, setCurrentRenderer } from '@rubickjs/renderer'
+import { WebGLRenderer } from '@rubickjs/renderer'
 import { SceneTree } from '@rubickjs/scene'
 import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER, createHTMLCanvas } from '@rubickjs/shared'
 import { Input } from '@rubickjs/input'
+import type { Node, Timer, Viewport } from '@rubickjs/scene'
 import type { CanvasOptions } from './CanvasOptions'
 import type { PointerInputEvent, WheelInputEvent } from '@rubickjs/input'
-import type { Node, Timeline, Viewport } from '@rubickjs/scene'
 
 interface CanvasEventMap {
   'pointerdown': PointerInputEvent
@@ -64,8 +64,8 @@ export class Canvas extends EventEmitter {
   /**
    * Scene tree
    */
-  readonly tree: SceneTree
-  get timeline(): Timeline { return this.tree.timeline }
+  readonly tree = new SceneTree()
+  get timeline(): Timer { return this.tree.timeline }
   get root(): Viewport { return this.tree.root }
 
   /**
@@ -88,12 +88,11 @@ export class Canvas extends EventEmitter {
       height,
       pixelRatio = DEVICE_PIXEL_RATIO,
       gl,
-      timeline,
       background = [0, 0, 0, 0],
       ...rendererOptions
     } = options
 
-    this.tree = new SceneTree(timeline)
+    this.tree = new SceneTree()
     this.renderer = new WebGLRenderer(gl ?? view ?? createHTMLCanvas(), {
       alpha: true,
       stencil: true,
@@ -188,7 +187,7 @@ export class Canvas extends EventEmitter {
 
   /**
    * Adds a child node.
-   * Nodes can have any number of children, but every child must have a unique name.
+   * Nodes can have any number of childNodes, but every child must have a unique name.
    * Child nodes are automatically deleted when the parent node is deleted, so an entire scene can be removed by deleting its topmost node.
    */
   appendChild<T extends Node, D extends Node>(node: T, previousSibling?: D): boolean {
@@ -199,8 +198,8 @@ export class Canvas extends EventEmitter {
    * Render scene tree
    */
   render(delta = 0): void {
-    setCurrentRenderer(this.renderer)
     this.tree.process(delta)
+    this.tree.render(this.renderer)
   }
 
   /**
@@ -223,7 +222,7 @@ export class Canvas extends EventEmitter {
    * Destroy application
    */
   destroy(): void {
-    this.root.children.forEach(node => {
+    this.root.childNodes.forEach(node => {
       this.root.removeChild(node)
     })
     this.unobserve()

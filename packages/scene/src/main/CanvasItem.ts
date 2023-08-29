@@ -4,6 +4,7 @@ import { Ref } from '@rubickjs/shared'
 import { CanvasItemStyle } from '../resources'
 import { Node } from './Node'
 import { Viewport } from './Viewport'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { ColorValue } from '@rubickjs/color'
 import type { Effect } from './Effect'
 
@@ -27,11 +28,6 @@ export class CanvasItem extends Node {
   protected _style = new CanvasItemStyle(this)
   get style() { return this._style }
   set style(val) { this._style.update(val) }
-
-  /**
-   * Filter
-   */
-  filter?: Effect
 
   /**
    * Animation
@@ -92,34 +88,43 @@ export class CanvasItem extends Node {
   updateAlpha(): void {
     if (this.hasDirty('alpha')) {
       this.deleteDirty('alpha')
-      if (this.owner instanceof CanvasItem) {
-        this._globalAlpha.value = this.alpha * this.owner.globalAlpha
+      if (this.parentNode instanceof CanvasItem) {
+        this._globalAlpha.value = this.alpha * this.parentNode.globalAlpha
       } else {
         this._globalAlpha.value = this.alpha
       }
 
-      for (let len = this.children.length, i = 0; i < len; i++) {
-        this.children[i].addDirty('alpha')
+      for (let len = this.childNodes.length, i = 0; i < len; i++) {
+        this.childNodes[i].addDirty('alpha')
       }
     }
   }
 
-  override process(delta: number) {
+  protected override _process(delta: number) {
+    super._process(delta)
     this.updateAlpha()
-    const currentTime = this.currentTime
-    const currentViewport = this.currentViewport
-    if (currentViewport) {
-      this._withEffects(currentTime, currentViewport, () => {
-        super.process(delta)
-        this._render(currentTime)
-      })
-    } else {
-      super.process(delta)
-      this._render(currentTime)
+  }
+
+  override render(renderer: WebGLRenderer) {
+    if (this.isRenderable()) {
+      const currentTime = this.timeline?.currentTime ?? 0
+      const currentViewport = this.currentViewport
+      if (currentViewport) {
+        this._renderWithEffects(renderer, currentTime, currentViewport, () => {
+          this._render(renderer)
+          this._renderChildNodes(renderer)
+        })
+      } else {
+        this._render(renderer)
+        this._renderChildNodes(renderer)
+      }
     }
   }
 
-  protected _withTransition(currentTime: number): RenderWithEffectFunc | undefined {
+  protected _renderWithTransition(
+    renderer: WebGLRenderer,
+    currentTime: number,
+  ): RenderWithEffectFunc | undefined {
     const transitionTime = currentTime - this.visibleTime
     const transition = this.transition
 
@@ -134,24 +139,23 @@ export class CanvasItem extends Node {
           viewport2: to,
         } = transition
 
-        from.copy(renderViewport)
+        from.copy(renderer, renderViewport)
         to.size = renderViewport.size
-        to.activate()
-        to.clear()
+        to.activate(renderer)
+        renderer.clear()
         render(to)
 
-        renderViewport.activate()
-        renderViewport.clear()
-        from.texture.activate(0)
-        to.texture.activate(1)
+        renderViewport.activate(renderer)
+        renderer.clear()
+        from.texture.activate(renderer, 0)
+        to.texture.activate(renderer, 1)
 
-        transition.apply(renderViewport, {
+        transition.apply(renderer, renderViewport, {
           time: transitionTime,
           from,
           to,
         })
 
-        const renderer = this.renderer
         renderer.activeTexture({ target: 'texture_2d', unit: 0, value: null })
         renderer.activeTexture({ target: 'texture_2d', unit: 1, value: null })
       }
@@ -160,7 +164,10 @@ export class CanvasItem extends Node {
     return undefined
   }
 
-  protected _withAnimation(currentTime: number): RenderWithEffectFunc | undefined {
+  protected _renderWithAnimation(
+    renderer: WebGLRenderer,
+    currentTime: number,
+  ): RenderWithEffectFunc | undefined {
     const animations = [
       this.animationEnter,
       this.animation,
@@ -184,12 +191,12 @@ export class CanvasItem extends Node {
       return render => renderViewport => {
         const viewport = this.viewport
         viewport.size = renderViewport.size
-        viewport.activate()
-        viewport.clear()
+        viewport.activate(renderer)
+        renderer.clear()
         render(viewport)
-        renderViewport.activate()
-        viewport.texture.activate(0)
-        currentAnimation!.apply(renderViewport, {
+        renderViewport.activate(renderer)
+        viewport.texture.activate(renderer, 0)
+        currentAnimation!.apply(renderer, renderViewport, {
           target: this,
           time: animationTime,
         })
@@ -199,17 +206,9 @@ export class CanvasItem extends Node {
     return undefined
   }
 
-  protected _withEffects(currentTime: number, currentViewport: Viewport, render: RenderFunc): void {
-    render = this._withAnimation(currentTime)?.(render) ?? render
-    render = this._withTransition(currentTime)?.(render) ?? render
+  protected _renderWithEffects(renderer: WebGLRenderer, currentTime: number, currentViewport: Viewport, render: RenderFunc): void {
+    render = this._renderWithAnimation(renderer, currentTime)?.(render) ?? render
+    render = this._renderWithTransition(renderer, currentTime)?.(render) ?? render
     render(currentViewport)
   }
-
-  /**
-   * Render
-   *
-   * @param currentTime
-   */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected _render(currentTime: number): void {}
 }

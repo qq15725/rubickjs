@@ -1,4 +1,3 @@
-import type { Timeline } from '@rubickjs/scene'
 import type { ColorValue } from '@rubickjs/color'
 
 export interface CanvasOptions extends WebGLContextAttributes {
@@ -7,6 +6,5 @@ export interface CanvasOptions extends WebGLContextAttributes {
   height?: number
   pixelRatio?: number
   gl?: WebGLRenderingContext | WebGL2RenderingContext
-  timeline?: Timeline
   background?: ColorValue
 }

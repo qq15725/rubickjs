@@ -2,6 +2,8 @@ import { PointerInputEvent } from '@rubickjs/input'
 import { isPromise, isVideoElement } from '@rubickjs/shared'
 import { Texture } from '../resources'
 import { Node2D } from './Node2D'
+import type { WebGLRenderer } from '@rubickjs/renderer'
+import type { Effect } from '../main'
 import type { UIInputEvent } from '@rubickjs/input'
 import type { Rectangle } from '@rubickjs/math'
 
@@ -49,6 +51,11 @@ export class Sprite extends Node2D {
   get texture(): Texture {
     return this.frames[this.frame].texture
   }
+
+  /**
+   * Filter
+   */
+  filter?: Effect
 
   protected isVideo = false
 
@@ -121,7 +128,15 @@ export class Sprite extends Node2D {
   protected _updateVertices(): void {
     let { x: width, y: height } = this.texture.size
 
-    if (!width || !height) return
+    if (
+      !this.hasDirty('vertices')
+      || !width
+      || !height
+    ) {
+      return
+    }
+
+    this.deleteDirty('vertices')
 
     const { x: originX, y: originY } = this.transformOrigin
 
@@ -154,8 +169,8 @@ export class Sprite extends Node2D {
     this.vertices = vertices
   }
 
-  protected _updateFrame(currentTime?: number): void {
-    currentTime = (currentTime ?? this.currentTime) - this.visibleTime
+  protected _updateFrame(): void {
+    let currentTime = (this.timeline?.currentTime ?? 0) - this.visibleTime
 
     if (currentTime < 0) {
       this.frame = 0
@@ -171,7 +186,7 @@ export class Sprite extends Node2D {
       currentTime /= 1000
       if (source.currentTime !== currentTime && !source.seeking) {
         source.currentTime = currentTime
-        this.texture.update()
+        // TODO this.texture.update()
       }
     } else {
       let index = len - 1
@@ -219,30 +234,29 @@ export class Sprite extends Node2D {
     }
   }
 
-  override process(delta: number) {
-    this.emit('process', delta)
-    super.process(delta)
+  protected override _process(delta: number) {
+    super._process(delta)
+    this._updateFrame()
+    this._updateVertices()
   }
 
-  protected override _render(currentTime: number) {
-    this._updateFrame(currentTime)
-
-    if (this.hasDirty('vertices')) {
-      this.deleteDirty('vertices')
-      this._updateVertices()
+  protected override _render(renderer: WebGLRenderer): void {
+    if (!this.vertices) {
+      return
     }
 
-    if (this.vertices) {
-      this.renderer.batch.render({
-        vertices: this.vertices,
-        indices: this.indices,
-        uvs: this.uvs,
-        texture: (this.filter?.redrawTexture(this.texture, this) ?? this.texture).getRelated(),
-        backgroundColor: this._backgroundColor.abgr,
-        tint: (this.globalAlpha * 255 << 24) + this._tint.bgr,
-        colorMatrix: this.colorMatrix.toMatrix4().toArray(true),
-        colorMatrixOffset: this.colorMatrix.toVector4().toArray(),
-      })
-    }
+    const texture = this.filter?.redrawTexture(renderer, this.texture, this)
+      ?? this.texture
+
+    renderer.batch.render({
+      vertices: this.vertices,
+      indices: this.indices,
+      uvs: this.uvs,
+      texture: texture.glTexture(renderer),
+      backgroundColor: this._backgroundColor.abgr,
+      tint: (this.globalAlpha * 255 << 24) + this._tint.bgr,
+      colorMatrix: this.colorMatrix.toMatrix4().toArray(true),
+      colorMatrixOffset: this.colorMatrix.toVector4().toArray(),
+    })
   }
 }

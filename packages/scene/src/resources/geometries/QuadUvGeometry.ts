@@ -3,6 +3,7 @@ import { AttributeBuffer } from '../AttributeBuffer'
 import { IndexBuffer } from '../IndexBuffer'
 import { Geometry } from '../Geometry'
 import { UvMaterial } from '../materials/UvMaterial'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { Material } from '../Material'
 
 export class QuadUvGeometry extends Geometry {
@@ -12,16 +13,18 @@ export class QuadUvGeometry extends Geometry {
   static instance = new this()
 
   /**
-   * Drwa
+   * Draw
    *
+   * @param renderer
    * @param material
    * @param uniforms
    */
   static draw(
+    renderer: WebGLRenderer,
     material: Material = UvMaterial.instance,
     uniforms?: Record<string, any>,
   ): void {
-    this.instance.draw(material, uniforms)
+    this.instance.draw(renderer, material, uniforms)
   }
 
   constructor() {

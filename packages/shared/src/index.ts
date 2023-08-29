@@ -1,4 +1,6 @@
-export * from './constants'
+export * from './dom'
 export * from './EventEmitter'
 export * from './Ref'
+export * from './RefResouce'
+export * from './Resouce'
 export * from './utils'

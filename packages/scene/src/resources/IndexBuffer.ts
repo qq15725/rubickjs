@@ -1,4 +1,5 @@
-import { Resouce } from '../main/Resouce'
+import { Resouce } from '@rubickjs/shared'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 
 export class IndexBuffer extends Resouce {
   data: Uint16Array | null
@@ -18,7 +19,7 @@ export class IndexBuffer extends Resouce {
     })
   }
 
-  getBufferProps() {
+  glBufferProps() {
     return {
       target: 'element_array_buffer',
       data: this.data,
@@ -26,14 +27,16 @@ export class IndexBuffer extends Resouce {
     } as const
   }
 
-  getRelated() {
-    const renderer = this.renderer
+  glBuffer(renderer: WebGLRenderer): WebGLBuffer {
     return renderer.getRelated(this, () => {
-      return renderer.createBuffer(this.getBufferProps())
+      return renderer.createBuffer(this.glBufferProps())
     })
   }
 
-  update() {
-    this.renderer.updateBuffer(this.getRelated(), this.getBufferProps())
+  upload(renderer: WebGLRenderer) {
+    renderer.updateBuffer(
+      this.glBuffer(renderer),
+      this.glBufferProps(),
+    )
   }
 }

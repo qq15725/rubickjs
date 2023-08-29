@@ -1,6 +1,7 @@
-import { Resouce } from './Resouce'
+import { Resouce } from '@rubickjs/shared'
+import type { Timer } from './Timer'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
-import type { Timeline } from '../resources'
 import type { Viewport } from './Viewport'
 import type { SceneTree } from './SceneTree'
 
@@ -13,15 +14,12 @@ export class Node extends Resouce {
   /**
    * The timeline of this node
    */
-  get timeline(): Timeline | undefined { return this.tree?.timeline }
-  get currentTime(): number { return this.timeline?.currentTime ?? 0 }
-  get currentStartTime(): number { return this.timeline?.startTime ?? 0 }
-  get currentEndTime(): number { return this.timeline?.endTime ?? 0 }
+  get timeline(): Timer | undefined { return this.tree?.timeline }
 
   /**
    * The currently active viewport
    */
-  get currentViewport(): Viewport | undefined { return this.tree?.viewport }
+  get currentViewport(): Viewport | undefined { return this.tree?.activeViewport }
 
   /**
    * The root viewport of this node
@@ -29,21 +27,21 @@ export class Node extends Resouce {
   get root(): Viewport | undefined { return this.tree?.root }
 
   /**
-   * The owning node of this node
+   * The parent node of this node
    */
-  owner?: Node | null
+  parentNode?: Node | null
 
   /**
-   * The index of owner children
+   * The index of owner childNodes
    */
-  get index(): number { return this.owner?.children.indexOf(this) ?? -1 }
-  get previousSibling(): Node | undefined { return this.owner?.children[this.index - 1] }
-  get nextSibling(): Node | undefined { return this.owner?.children[this.index + 1] }
+  get index(): number { return this.parentNode?.childNodes.indexOf(this) ?? -1 }
+  get previousSibling(): Node | undefined { return this.parentNode?.childNodes[this.index - 1] }
+  get nextSibling(): Node | undefined { return this.parentNode?.childNodes[this.index + 1] }
 
   /**
-   * Node's children
+   * Node's childNodes
    */
-  children: Node[] = []
+  childNodes: Node[] = []
 
   /**
    * Whether to display in the scene
@@ -56,11 +54,11 @@ export class Node extends Resouce {
       this.visibleTime,
       this.visibleDuration
         ? this.visibleTime + this.visibleDuration
-        : this.currentEndTime,
+        : this.timeline?.endTime ?? 0,
     ]
   }
 
-  isVisible(currentTime = this.currentTime): boolean {
+  isVisible(currentTime = this.timeline?.currentTime ?? 0): boolean {
     if (this.visible) {
       const [startTime, endTime] = this.visibleRange
       return startTime <= currentTime && currentTime <= endTime
@@ -88,31 +86,76 @@ export class Node extends Resouce {
   /**
    * Hook for node ready
    */
-  ready(): void {}
+  ready(): void {
+    //
+  }
 
   /**
    * Hook for input event
    */
-  input(event: UIInputEvent): void | boolean {
-    const currentTime = this.currentTime
-    for (let i = this.children.length - 1; i >= 0; i--) {
-      const child = this.children[i]
-      if (child.isVisible(currentTime)) {
-        child.input(event)
-      }
+  input(event: UIInputEvent): void {
+    for (let i = this.childNodes.length - 1; i >= 0; i--) {
+      this.childNodes[i].input(event)
+    }
+
+    this._input(event)
+  }
+
+  protected _input(_event: UIInputEvent): void {
+    //
+  }
+
+  /**
+   * Process node with childNodes status updates before rendering
+   * @param delta
+   */
+  process(delta: number): void {
+    for (let i = this.childNodes.length - 1; i >= 0; i--) {
+      this.childNodes[i].process(delta)
+    }
+
+    this._process(delta)
+  }
+
+  /**
+   * Process node status updates before rendering
+   */
+  protected _process(_delta: number): void {
+    //
+  }
+
+  protected isRenderable(): boolean {
+    return this.visible
+  }
+
+  /**
+   * Render node with child nodes
+   * @param renderer
+   */
+  render(renderer: WebGLRenderer): void {
+    if (this.isRenderable()) {
+      this._render(renderer)
+      this._renderChildNodes(renderer)
     }
   }
 
   /**
-   * Hook for per frame process
+   * Render node
+   * @param _renderer
+   * @protected
    */
-  process(delta: number): void | boolean {
-    const currentTime = this.currentTime
-    for (let len = this.children.length, i = 0; i < len; i++) {
-      const child = this.children[i]
-      if (child.isVisible(currentTime)) {
-        child.process(delta)
-      }
+  protected _render(_renderer: WebGLRenderer): void {
+    //
+  }
+
+  /**
+   * Render child nodes
+   * @param renderer
+   * @protected
+   */
+  protected _renderChildNodes(renderer: WebGLRenderer): void {
+    for (let len = this.childNodes.length, i = 0; i < len; i++) {
+      this.childNodes[i].render(renderer)
     }
   }
 
@@ -125,29 +168,29 @@ export class Node extends Resouce {
 
   /**
    * Adds a child node.
-   * Nodes can have any number of children, but every child must have a unique id.
+   * Nodes can have any number of childNodes, but every child must have a unique id.
    * Child nodes are automatically deleted when the parent node is deleted, so an entire scene can be removed by deleting its topmost node.
    */
   appendChild<T extends Node, D extends Node>(node: T, previousSibling?: D): boolean {
-    if (node.owner) {
+    if (node.parentNode) {
       return false
     }
 
-    node.owner = this
+    node.parentNode = this
     node.tree = this.tree
 
     if (previousSibling) {
-      if (previousSibling.owner !== this) {
+      if (previousSibling.parentNode !== this) {
         return false
       }
-      this.children.splice(previousSibling.index + 1, 0, node)
+      this.childNodes.splice(previousSibling.index + 1, 0, node)
     } else {
-      this.children.push(node)
+      this.childNodes.push(node)
     }
 
     if (node.tree) {
       node.enterTree()
-      node.children.forEach(child => {
+      node.childNodes.forEach(child => {
         if (child.tree !== node.tree) {
           child.tree = node.tree
           child.enterTree()
@@ -167,18 +210,18 @@ export class Node extends Resouce {
   removeChild<T extends Node>(node: T): boolean {
     const index = node.index
 
-    if (node.owner !== this || index < 0) {
+    if (node.parentNode !== this || index < 0) {
       return false
     }
 
-    node.owner = null
+    node.parentNode = null
 
-    this.children.splice(index, 1)
+    this.childNodes.splice(index, 1)
 
     if (node.tree) {
       node.tree = null
       node.exitTree()
-      node.children.forEach(child => {
+      node.childNodes.forEach(child => {
         if (child.tree) {
           child.tree = null
           child.exitTree()

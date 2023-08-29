@@ -1,6 +1,5 @@
 export * from './WebGL'
 
-export * from './global'
 export * from './Renderer'
 export * from './utils'
 export * from './WebGLRenderer'

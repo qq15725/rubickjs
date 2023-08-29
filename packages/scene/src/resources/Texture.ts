@@ -1,20 +1,14 @@
 import { Vector2 } from '@rubickjs/math'
-import { isImageElement, isVideoElement } from '@rubickjs/shared'
-import { Resouce } from '../main/Resouce'
-import type { WebGLTextureFilterMode, WebGLTextureWrapMode } from '@rubickjs/renderer'
+import { Ref, Resouce, isImageElement, isVideoElement } from '@rubickjs/shared'
+import type { WebGLRenderer, WebGLTextureFilterMode, WebGLTextureWrapMode } from '@rubickjs/renderer'
 
 export type TextureFilterMode = WebGLTextureFilterMode
 export type TextureWrapMode = WebGLTextureWrapMode
 
 export class Texture extends Resouce {
-  /**
-   * Empty texture
-   */
+  /** Empty texture */
   static EMPTY = new this({ width: 1, height: 1, pixels: new Uint8ClampedArray(4) })
-
-  /**
-   * White texture
-   */
+  /** White texture */
   static WHITE = new this({ width: 1, height: 1, pixels: new Uint8ClampedArray([255, 255, 255, 255]) })
 
   /**
@@ -26,24 +20,29 @@ export class Texture extends Resouce {
    * Texture width and height
    */
   readonly size: Vector2
-
-  get width() { return this.size.x }
-  get height() { return this.size.y }
+  get width() { return this.size[0] }
+  get height() { return this.size[1] }
 
   /**
    * Texture filter mode
    */
-  filterMode: TextureFilterMode = 'linear'
+  protected readonly _filterMode = new Ref<TextureFilterMode>('linear')
+  get filterMode() { return this._filterMode.value }
+  set filterMode(val) { this._filterMode.value = val }
 
   /**
    * Texture wrap mode
    */
-  wrapMode: TextureWrapMode = 'repeat'
+  protected readonly _wrapMode = new Ref<TextureWrapMode>('repeat')
+  get wrapMode() { return this._wrapMode.value }
+  set wrapMode(val) { this._wrapMode.value = val }
 
   /**
    * Pixel ratio
    */
-  pixelRatio = 1
+  protected readonly _pixelRatio = new Ref(1)
+  get pixelRatio() { return this._pixelRatio.value }
+  set pixelRatio(val) { this._pixelRatio.value = val }
 
   constructor(
     source: TexImageSource | {
@@ -69,7 +68,7 @@ export class Texture extends Resouce {
     this.addDirty('size')
   }
 
-  getTextureProps() {
+  glTextureProps() {
     const source = this.source
     return {
       index: 0,
@@ -81,37 +80,44 @@ export class Texture extends Resouce {
             pixels: source ?? null,
           }
         : source,
-      filterMode: this.filterMode,
-      wrapMode: this.wrapMode,
+      filterMode: this._filterMode.value,
+      wrapMode: this._wrapMode.value,
     }
   }
 
-  getRelated(): WebGLTexture {
-    const renderer = this.renderer
+  glTexture(renderer: WebGLRenderer): WebGLTexture {
     return renderer.getRelated(this, () => {
-      return renderer.createTexture(this.getTextureProps())
+      return renderer.createTexture(this.glTextureProps())
     })
   }
 
-  update() {
+  upload(renderer: WebGLRenderer) {
+    if (!this.isDirty) {
+      return
+    }
+
     this.clearDirty()
 
-    this.renderer
-      .updateTexture(this.getRelated(), this.getTextureProps())
+    renderer.updateTexture(
+      this.glTexture(renderer),
+      this.glTextureProps(),
+    )
   }
 
-  activate(unit = 0, then?: () => void | false) {
-    this.renderer
-      .activeTexture({
-        target: 'texture_2d',
-        value: this.getRelated(),
-        unit,
-      }, () => {
-        if (this.isDirty) {
-          this.update()
-        }
+  activate(
+    renderer: WebGLRenderer,
+    location = 0,
+    then?: () => void | false,
+  ) {
+    renderer.activeTexture({
+      target: 'texture_2d',
+      value: this.glTexture(renderer),
+      unit: location,
+    }, () => {
+      this.upload(renderer)
 
-        return then?.()
-      })
+      return then?.()
+    })
   }
 }
+

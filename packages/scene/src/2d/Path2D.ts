@@ -2,6 +2,7 @@ import { Circle, Ellipse, Polygon, Rectangle, buildFillLine, buildFillShape } fr
 import { Texture, UvGeometry, UvMaterial } from '../resources'
 import { Viewport } from '../main'
 import { Node2D } from './Node2D'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { Shape } from '@rubickjs/math'
 
 export class Path2D extends Node2D {
@@ -112,29 +113,34 @@ export class Path2D extends Node2D {
     this.addDirty('buffers')
   }
 
-  protected override _render() {
-    if (!this.vertices || !this.uvs || !this.indices) {
-      return
+  protected override isRenderable(): boolean {
+    return super.isRenderable() && !!this.vertices && !!this.uvs && !!this.indices
+  }
+
+  protected override _process(_delta: number) {
+    super._process(_delta)
+    if (this.isRenderable()) {
+      if (this.isDirty) {
+        this.clearDirty()
+
+        this.geometry.update(
+          this.vertices!,
+          this.uvs!,
+          this.indices!,
+        )
+      }
     }
+  }
 
-    if (this.isDirty) {
-      this.clearDirty()
-
-      this.geometry.update(
-        this.vertices,
-        this.uvs,
-        this.indices,
-      )
-    }
-
+  protected override _render(renderer: WebGLRenderer) {
     if (this.texture instanceof Viewport) {
-      this.texture.texture.activate()
+      this.texture.texture.activate(renderer)
     } else {
-      this.texture.activate()
+      this.texture.activate(renderer)
     }
 
-    this.geometry.draw(this.material, {
-      ...this.renderer.uniforms,
+    this.geometry.draw(renderer, this.material, {
+      ...renderer.uniforms,
       // tint: this.tint.toArray(),
     })
   }

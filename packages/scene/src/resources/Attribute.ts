@@ -1,4 +1,4 @@
-import { Resouce } from '../main/Resouce'
+import { Resouce } from '@rubickjs/shared'
 import { AttributeBuffer } from './AttributeBuffer'
 
 export class Attribute extends Resouce {
@@ -27,15 +27,5 @@ export class Attribute extends Resouce {
     this.stride = props?.stride
     this.offset = props?.offset
     this.divisor = props?.divisor
-  }
-
-  static from(data?: number[] | null, size?: number, dynamic?: boolean) {
-    return new this({
-      size,
-      buffer: new AttributeBuffer({
-        data: data ? new Float32Array(data) : data,
-        dynamic,
-      }),
-    })
   }
 }
