@@ -36,7 +36,7 @@ export abstract class Renderer {
     return related
   }
 
-  resize(width: number, height: number, updateCss = true) {
+  resize(width: number, height: number, updateStyle = true) {
     const viewWidth = Math.round(width * this.pixelRatio)
     const viewHeight = Math.round(height * this.pixelRatio)
     const screenWidth = viewWidth / this.pixelRatio
@@ -47,7 +47,7 @@ export abstract class Renderer {
     }
     this.screen.width = screenWidth
     this.screen.height = screenHeight
-    if (updateCss && this.view) {
+    if (updateStyle && this.view) {
       this.view.style.width = `${ screenWidth }px`
       this.view.style.height = `${ screenHeight }px`
     }

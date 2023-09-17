@@ -1,4 +1,4 @@
-import { Texture } from '@rubickjs/scene'
+import { Texture } from '@rubickjs/core'
 import type { Loader } from '../Loader'
 
 export const imageMime = new Set([

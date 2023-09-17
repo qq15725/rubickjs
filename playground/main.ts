@@ -1,8 +1,8 @@
-import { Assets, Canvas, Label, Node2D, Sprite, lerp } from 'rubickjs'
+import { Animation, Assets, Canvas, Effect, Label, Node2D, Sprite } from 'rubickjs'
 
-const canvas = new Canvas()
+const canvas = new Canvas().observe()
 
-canvas.observe()
+// view
 const view = canvas.view!
 view.style.width = '100vw'
 view.style.height = '100vh'
@@ -18,7 +18,7 @@ text.x = 100
 text.y = 100
 canvas.appendChild(text)
 
-const texture = Assets.load('https://pixijs.com/assets/bunny.png')
+const texture = Assets.load<any>('https://pixijs.com/assets/bunny.png')
 
 // sprite
 const bunny = new Sprite(texture)
@@ -33,27 +33,44 @@ for (let i = 0; i < 5; i++) {
   item.x = i * 10
   group.appendChild(item)
 }
+
+// effect
+const effect = new Effect({
+  glsl: `vec4 transition(vec2 uv) {
+  return mix(
+    getColor(uv),
+    getToColor(uv),
+    progress
+  );
+}`,
+})
+
+group.appendChild(
+  new Animation({
+    startTime: 5000,
+    duration: 10000,
+    keyframes: [
+      { left: 300, top: 100, offset: 0, easing: 'easeIn' },
+      { left: 400, top: 120, offset: 0.5, easing: 'easeOut' },
+      { left: 350, top: 120, offset: 0.8, easing: 'easeOut' },
+      { left: 300, top: 100, offset: 1 },
+    ],
+    loop: true,
+  }),
+)
+
 canvas.appendChild(group)
 
-const animation = {
-  keyframes: [{ opacity: 0, offset: 0 }, { offset: 1 }],
-  duration: 2000,
-}
-
-canvas.timeline.on('update', delta => {
+canvas.timeline.on('update', (_, delta) => {
   text.rotation += 0.005 * delta
   bunny.x = canvas.width / 2 - bunny.width / 2
   bunny.y = canvas.height / 2 - bunny.height / 2
   bunny.rotation += 0.001 * delta
   group.rotation += 0.001 * delta
-
-  const start = animation.keyframes[0]
-  const end = animation.keyframes[1]
-  const time = (canvas.timeline.currentTime - animation.duration) / animation.duration
-  bunny.alpha = lerp(1, 0, time)
 })
 
 canvas.start()
 
 ;(window as any).canvas = canvas
+;(window as any).group = group
 ;(window as any).bunny = bunny

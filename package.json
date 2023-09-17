@@ -1,5 +1,5 @@
 {
-  "name": "rubickjs",
+  "name": "@rubickjs/monorepo",
   "version": "0.0.1-beta.1",
   "packageManager": "pnpm@8.6.12",
   "private": true,

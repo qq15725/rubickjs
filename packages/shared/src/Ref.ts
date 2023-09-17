@@ -8,11 +8,14 @@ export interface Ref<T> {
 }
 
 export class Ref<T> extends EventEmitter {
+  dirtyId = -1
+
   get value() { return this._value }
   set value(val) {
     const oldVal = this._value
     if (val !== oldVal) {
       this._value = val
+      this.dirtyId++
       this.emit('update', val, oldVal)
     }
   }

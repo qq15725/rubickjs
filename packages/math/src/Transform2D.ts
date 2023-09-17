@@ -20,7 +20,8 @@ export class Transform2D extends Matrix3 {
   /**
    * Dirty data needs to be updated
    */
-  dirty = false
+  protected _dirtyId = 0
+  dirtyId = this._dirtyId
 
   /**
    * Transform's rotation (in radians)
@@ -84,7 +85,7 @@ export class Transform2D extends Matrix3 {
   }
 
   protected _onUpdate(): void {
-    this.dirty = true
+    this.dirtyId++
   }
 
   protected _onUpdateSkew(): void {
@@ -92,7 +93,7 @@ export class Transform2D extends Matrix3 {
     this._sx = Math.sin(this._rotation + this.skew.y)
     this._cy = -Math.sin(this._rotation - this.skew.x) // cos, added PI/2
     this._sy = Math.cos(this._rotation - this.skew.x) // sin, added PI/2
-    this.dirty = true
+    this.dirtyId++
   }
 
   sync() {
@@ -184,11 +185,11 @@ export class Transform2D extends Matrix3 {
   }
 
   update(): boolean {
-    if (!this.dirty) {
+    if (this._dirtyId === this.dirtyId) {
       return false
     }
 
-    this.dirty = false
+    this._dirtyId = this.dirtyId
 
     const { x: scaleX, y: scaleY } = this.scale
 

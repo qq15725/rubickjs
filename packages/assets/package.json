@@ -40,10 +40,10 @@
   "unpkg": "dist/index.umd.min.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
-  "dependencies": {
-    "@rubickjs/scene": "workspace:*"
-  },
   "publishConfig": {
     "access": "public"
+  },
+  "peerDependencies": {
+    "@rubickjs/core": "workspace:*"
   }
 }

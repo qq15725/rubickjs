@@ -57,11 +57,26 @@ importers:
         specifier: ^0.34.1
         version: 0.34.1
 
+  packages/2d:
+    dependencies:
+      '@rubickjs/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/animation:
+    dependencies:
+      '@rubickjs/core':
+        specifier: workspace:*
+        version: link:../core
+      '@rubickjs/math':
+        specifier: workspace:*
+        version: link:../math
+
   packages/assets:
     dependencies:
-      '@rubickjs/scene':
+      '@rubickjs/core':
         specifier: workspace:*
-        version: link:../scene
+        version: link:../core
 
   packages/color:
     dependencies:
@@ -71,6 +86,30 @@ importers:
       colord:
         specifier: ^2.9.3
         version: 2.9.3
+
+  packages/core:
+    dependencies:
+      '@rubickjs/color':
+        specifier: workspace:*
+        version: link:../color
+      '@rubickjs/input':
+        specifier: workspace:*
+        version: link:../input
+      '@rubickjs/math':
+        specifier: workspace:*
+        version: link:../math
+      '@rubickjs/renderer':
+        specifier: workspace:*
+        version: link:../renderer
+      '@rubickjs/shared':
+        specifier: workspace:*
+        version: link:../shared
+
+  packages/effect:
+    dependencies:
+      '@rubickjs/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/input:
     dependencies:
@@ -88,33 +127,24 @@ importers:
 
   packages/rubickjs:
     dependencies:
+      '@rubickjs/2d':
+        specifier: workspace:*
+        version: link:../2d
+      '@rubickjs/animation':
+        specifier: workspace:*
+        version: link:../animation
       '@rubickjs/assets':
         specifier: workspace:*
         version: link:../assets
       '@rubickjs/color':
         specifier: workspace:*
         version: link:../color
-      '@rubickjs/input':
+      '@rubickjs/core':
         specifier: workspace:*
-        version: link:../input
-      '@rubickjs/math':
+        version: link:../core
+      '@rubickjs/effect':
         specifier: workspace:*
-        version: link:../math
-      '@rubickjs/renderer':
-        specifier: workspace:*
-        version: link:../renderer
-      '@rubickjs/scene':
-        specifier: workspace:*
-        version: link:../scene
-      '@rubickjs/shared':
-        specifier: workspace:*
-        version: link:../shared
-
-  packages/scene:
-    dependencies:
-      '@rubickjs/color':
-        specifier: workspace:*
-        version: link:../color
+        version: link:../effect
       '@rubickjs/input':
         specifier: workspace:*
         version: link:../input

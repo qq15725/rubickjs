@@ -44,12 +44,15 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "dependencies": {
+    "@rubickjs/2d": "workspace:*",
+    "@rubickjs/animation": "workspace:*",
     "@rubickjs/assets": "workspace:*",
     "@rubickjs/color": "workspace:*",
+    "@rubickjs/core": "workspace:*",
+    "@rubickjs/effect": "workspace:*",
     "@rubickjs/input": "workspace:*",
     "@rubickjs/math": "workspace:*",
     "@rubickjs/renderer": "workspace:*",
-    "@rubickjs/scene": "workspace:*",
     "@rubickjs/shared": "workspace:*"
   },
   "publishConfig": {

@@ -22,7 +22,7 @@ export class EventEmitter {
     }
   }
 
-  removeEventListener(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): void {
+  removeEventListener(event: string, listener?: EventListener, options?: boolean | AddEventListenerOptions): void {
     if (!listener) {
       this._eventListeners.delete(event)
       return
@@ -41,7 +41,7 @@ export class EventEmitter {
         if (
           object.value !== listener
           || (
-            (typeof options === 'object' && options?.once)
+            typeof options === 'object' && options?.once
             && (typeof object.options === 'boolean' || !object.options?.once)
           )
         ) {
@@ -57,8 +57,8 @@ export class EventEmitter {
       if (
         listeners.value === listener
         && (
-          (typeof options === 'object' && options?.once)
-          && (typeof listeners.options === 'boolean' || !listeners.options?.once)
+          (typeof options === 'boolean' || !options?.once)
+          || (typeof listeners.options === 'boolean' || listeners.options?.once)
         )
       ) {
         this._eventListeners.delete(event)

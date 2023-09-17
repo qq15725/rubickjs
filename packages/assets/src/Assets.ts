@@ -1,14 +1,9 @@
-import { blobTo } from './utils'
 import { imageLoader, videoLoader } from './loaders'
 import type { Loader, UrlInfo } from './Loader'
-import type { Resouce } from '@rubickjs/scene'
+import type { Resource } from '@rubickjs/core'
 
 export class Assets {
-  static resources = new Map<string, any>()
-
-  static requests = new Map<string, Promise<any>>()
-
-  static extMimeMap = new Map<string, string>([
+  static readonly EXT_TO_MIME_TYPE = new Map<string, string>([
     ['jpeg', 'image/jpeg'],
     ['jpg', 'image/jpeg'],
     ['png', 'image/png'],
@@ -23,34 +18,53 @@ export class Assets {
     ['ogg', 'video/ogg'],
   ])
 
+  static readonly requests = new Map<string, Promise<any>>()
+  static readonly resources = new Map<string, any>()
+
   static loaders = new Set<Loader>([
     imageLoader,
     videoLoader,
   ])
 
-  static get<T = Resouce>(url: string): T | undefined {
+  static get<T = Resource>(url: string): T | undefined {
     return this.resources.get(url)
   }
 
-  private static getLoader(urlInfo: UrlInfo) {
+  protected static _matchLoader(info: UrlInfo) {
     for (const loader of this.loaders) {
-      if (loader.test(urlInfo)) {
+      if (loader.test(info)) {
         return loader
       }
     }
     return undefined
   }
 
-  private static parseUrlInfo(url: string): UrlInfo {
-    const [path, query] = url.split('?')
-    const ext = path.match(/\.(\w+)$/)?.[1] ?? ''
-    const mime = path.match(/^data:(.+?);/)?.[1]
-      ?? this.extMimeMap.get(ext)
-      ?? ext
+  protected static async _parseUrlInfo(url: string): Promise<UrlInfo> {
+    let path, query, ext, mime
+    if (url.startsWith('blob:')) {
+      path = url
+      query = ''
+      mime = await fetch(url).then(res => res.blob()).then(blob => blob.type)
+      ext = mime.split('/')[1] ?? ''
+    } else if (url.startsWith('data:')) {
+      path = url
+      query = ''
+      mime = url.match(/^data:(.+?);/)?.[1] ?? ''
+      ext = mime.split('/')[1] ?? ''
+    } else {
+      [path, query] = url.split('?')
+      ext = path.match(/\.(\w+)$/)?.[1] ?? ''
+      if (ext) {
+        mime = this.EXT_TO_MIME_TYPE.get(ext) ?? ext
+      } else {
+        mime = await fetch(url).then(res => res.blob()).then(blob => blob.type)
+        ext = mime.split('/')[1] ?? ''
+      }
+    }
     return { url, path, query, ext, mime }
   }
 
-  static async load<T = Resouce>(url: string): Promise<T> {
+  static async load<T = Resource>(url: string): Promise<T> {
     const resource = this.get<T>(url)
 
     if (resource) {
@@ -58,29 +72,15 @@ export class Assets {
     }
 
     let request = this.requests.get(url)
+
     if (!request) {
-      let urlInfo = this.parseUrlInfo(url)
-      let loader = this.getLoader(urlInfo)
-      if (!loader) {
-        urlInfo = this.parseUrlInfo(
-          await fetch(url)
-            .then(res => res.blob())
-            .then(blob => blobTo(blob, 'dataURL')),
-        )
-        loader = this.getLoader(urlInfo)
-      }
-      if (loader) {
-        request = loader.load(urlInfo)
-        if (request instanceof Promise) {
-          this.requests.set(url, request.then(resource => {
-            this.requests.delete(url)
-            this.resources.set(url, resource)
-            return resource
-          }))
-        } else {
-          this.resources.set(url, request)
-        }
-      }
+      this.requests.set(url, request = this._parseUrlInfo(url).then(info => {
+        return Promise.resolve(this._matchLoader(info)?.load(info)).then(resource => {
+          this.requests.delete(url)
+          this.resources.set(url, resource)
+          return resource
+        })
+      }))
     }
 
     if (!request) {

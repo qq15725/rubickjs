@@ -1,9 +1,9 @@
 import { Color } from '@rubickjs/color'
 import { WebGLRenderer } from '@rubickjs/renderer'
-import { SceneTree } from '@rubickjs/scene'
+import { SceneTree } from '@rubickjs/core'
 import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER, createHTMLCanvas } from '@rubickjs/shared'
 import { Input } from '@rubickjs/input'
-import type { Node, Timer, Viewport } from '@rubickjs/scene'
+import type { Node, Timer, Viewport } from '@rubickjs/core'
 import type { CanvasOptions } from './CanvasOptions'
 import type { PointerInputEvent, WheelInputEvent } from '@rubickjs/input'
 
@@ -176,12 +176,11 @@ export class Canvas extends EventEmitter {
    *
    * @param width
    * @param height
-   * @param updateCss
+   * @param updateStyle
    */
-  resize(width: number, height: number, updateCss = true): this {
-    this.renderer.resize(width, height, updateCss)
+  resize(width: number, height: number, updateStyle = true): this {
     this.root.size.update(width, height)
-    this.renderer.uniforms.projectionMatrix = this.root.projection.toArray(true)
+    this.renderer.resize(width, height, updateStyle)
     return this
   }
 
@@ -198,16 +197,17 @@ export class Canvas extends EventEmitter {
    * Render scene tree
    */
   render(delta = 0): void {
-    this.tree.process(delta)
-    this.tree.render(this.renderer)
+    this.tree.render(this.renderer, delta)
   }
 
   /**
    * Start main loop
    */
   start(fps = 60, speed = 1): void {
-    this.tree.startLoop(fps, delta => {
-      this.render(delta * speed)
+    this.tree.fps = fps
+    this.tree.speed = speed
+    this.tree.startLoop(delta => {
+      this.render(delta)
     })
   }
 
