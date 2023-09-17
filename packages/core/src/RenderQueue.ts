@@ -1,6 +1,6 @@
 import { Resource } from './Resource'
 import type { Node } from './Node'
-import type { WebGLRenderer } from '../renderer'
+import type { WebGLRenderer } from '@rubickjs/renderer'
 
 export class RenderQueue<T extends Node = Node> extends Resource {
   protected _renderables: Array<T> = []

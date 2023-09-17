@@ -15,7 +15,7 @@ export class SceneTree extends MainLoop {
   setCurrentViewport(viewport: Viewport | undefined) { this._currentViewport = viewport }
 
   constructor(
-    readonly timeline = new Timer(),
+    public timeline = new Timer(),
   ) {
     super()
     const root = new Viewport(true)
