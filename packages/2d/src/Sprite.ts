@@ -1,75 +1,34 @@
 import { PointerInputEvent } from '@rubickjs/input'
-import { isPromise } from '@rubickjs/shared'
-import { PixelsTexture, VideoTexture } from '@rubickjs/core'
-import { clamp } from '@rubickjs/math'
+import { Texture } from '@rubickjs/core'
 import { Node2D } from './Node2D'
-import type { NodeProcessContext, Texture } from '@rubickjs/core'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
 import type { Rectangle } from '@rubickjs/math'
 
-export interface SpriteFrame {
-  /** Duration of the current frame */
-  duration?: number
-  /** Texture of the current frame */
-  texture: Texture
-}
-
-export class Sprite extends Node2D {
+export class Sprite<T extends Texture = Texture> extends Node2D {
+  /** Flag */
   protected override _renderable = true
 
-  loading = false
+  /** Trim area */
   trim?: Rectangle
-  frames!: SpriteFrame[]
-  frame = 0
-  duration!: number
-  get texture(): Texture { return this.frames[this.frame].texture }
 
-  /**
-   * Batchable props
-   */
-  protected vertices?: Float32Array
-  protected readonly indices = new Uint16Array([0, 1, 2, 0, 2, 3])
-  protected readonly uvs = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1])
+  protected _texture!: T
+  get texture() { return this._texture }
+  set texture(val) {
+    if (this._texture !== val) {
+      this._texture = val
+      this._onUpdateTexture()
+    }
+  }
 
-  constructor(value: Texture | Array<SpriteFrame> | Promise<Texture | Array<SpriteFrame>>) {
+  /** Batch draw */
+  protected _vertices?: Float32Array
+  protected _indices = new Uint16Array([0, 1, 2, 0, 2, 3])
+  protected _uvs = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1])
+
+  constructor(texture: T = Texture.EMPTY as any) {
     super()
-
-    if (isPromise<Texture | Array<SpriteFrame>>(value)) {
-      this.loadTexture(value)
-    } else {
-      this.updateTexture(value)
-    }
-  }
-
-  async loadTexture(val: Promise<Texture | Array<SpriteFrame>>): Promise<void> {
-    try {
-      this.loading = true
-      this.frames = [{ duration: 0, texture: PixelsTexture.EMPTY }]
-      this.duration = 0
-      const result = await val
-      this.updateTexture(result)
-    } finally {
-      this.loading = false
-    }
-  }
-
-  updateTexture(val: Texture | Array<SpriteFrame>, useTextureSize = true): void {
-    this.frame = 0
-    if (Array.isArray(val)) {
-      this.frames = val
-    } else {
-      this.frames = [{ duration: 0, texture: val }]
-    }
-    this.updateDuration()
-    if (useTextureSize) {
-      this.size.copy(this.texture.size)
-    }
-    this._onUpdateTexture()
-  }
-
-  updateDuration() {
-    this.duration = this.frames.reduce((total, frame) => total + (frame.duration ?? 0), 0)
+    this.texture = texture
   }
 
   updateScale() {
@@ -131,10 +90,11 @@ export class Sprite extends Node2D {
     vertices[5] = (b * x1) + (d * y1) + ty
     vertices[6] = (a * x0) + (c * y1) + tx
     vertices[7] = (b * x0) + (d * y1) + ty
-    this.vertices = vertices
+    this._vertices = vertices
   }
 
-  protected _onUpdateTexture() {
+  protected _onUpdateTexture(copySize = true) {
+    copySize && this.size.copy(this._texture.size)
     this.scheduleUpdateScale()
     this.scheduleUpdateVertices()
   }
@@ -151,42 +111,6 @@ export class Sprite extends Node2D {
 
   scheduleUpdateVertices() { this.addDirty('vertices') }
   scheduleUpdateScale() { this.addDirty('scale') }
-
-  updateFrame(currentTime: number): void {
-    currentTime = currentTime - this.visibleStartTime
-
-    if (currentTime < 0) {
-      this.frame = 0
-      return
-    }
-
-    currentTime = this.duration ? currentTime % this.duration : 0
-    const frames = this.frames
-    const len = frames.length
-
-    const texture = this.texture
-    if (texture instanceof VideoTexture) {
-      const source = texture.source
-      if (!texture.isPlaying && !source.seeking) {
-        currentTime = ~~currentTime / 1000
-        if (source.currentTime !== currentTime) {
-          source.currentTime = currentTime
-        }
-      }
-    } else {
-      let index = len - 1
-
-      for (let time = 0, i = 0; i < len; i++) {
-        time += frames[i]?.duration ?? 0
-        if (time >= currentTime) {
-          index = i
-          break
-        }
-      }
-
-      this.frame = clamp(0, index, this.frames.length - 1)
-    }
-  }
 
   override input(event: UIInputEvent) {
     super.input(event)
@@ -220,28 +144,27 @@ export class Sprite extends Node2D {
   }
 
   override isVisible(): boolean {
-    return this.vertices !== undefined && super.isVisible()
+    return this._vertices !== undefined && super.isVisible()
   }
 
-  protected override _process(context: NodeProcessContext) {
-    this.updateFrame(context.currentTime)
+  protected override _process(delta: number) {
     this.updateScale()
-    super._process(context)
+    super._process(delta)
     this.updateVertices()
   }
 
   protected override _render(renderer: WebGLRenderer): void {
-    if (!this.vertices) {
+    if (!this._vertices) {
       return
     }
 
-    this.texture.upload(renderer)
+    this._texture.upload(renderer)
 
     renderer.batch.render({
-      vertices: this.vertices,
-      indices: this.indices,
-      uvs: this.uvs,
-      texture: this.texture.glTexture(renderer),
+      vertices: this._vertices,
+      indices: this._indices,
+      uvs: this._uvs,
+      texture: this._texture.glTexture(renderer),
       backgroundColor: this._backgroundColor.abgr,
       tint: (this.globalAlpha * 255 << 24) + this._tint.bgr,
       colorMatrix: this.colorMatrix.toMatrix4().toArray(true),

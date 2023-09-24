@@ -42,6 +42,10 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
 
   get isReady(): boolean { return this.source.readyState > 2 }
   get isPlaying(): boolean { return (!this.source.paused && !this.source.ended && this.isReady) }
+  get duration(): number { return this.source.duration }
+  get seeking(): boolean { return this.source.seeking }
+  get currentTime(): number { return this.source.currentTime }
+  set currentTime(val) { this.source.currentTime = val }
 
   protected _autoUpdate = new Ref(true)
   get autoUpdate() { return this._autoUpdate.value }
@@ -50,15 +54,15 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
   protected _fps = new Ref(0)
   get fps() { return this._fps.value }
   set fps(val) { this._fps.value = val }
-  protected _spf = this._fps.value ? Math.round(1000 / this._fps.value) : 0
+  protected _spf = this._fps.value ? Math.floor(1000 / this._fps.value) : 0
 
   protected _autoPlay = false
 
+  protected _sourceLoad?: Promise<this>
   protected _nextTime = 0
-  protected _load?: Promise<this>
   protected _connected = false
   protected _requestId?: number
-  protected _resolve?: (value: this) => void
+  protected _resolve?: (val: this) => void
   protected _reject?: (event: ErrorEvent) => void
 
   constructor(
@@ -118,7 +122,7 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
     this._setupAutoUpdate()
 
     this._fps.on('update', val => {
-      this._spf = val ? Math.round(1000 / val) : 0
+      this._spf = val ? Math.floor(1000 / val) : 0
       this._setupAutoUpdate()
     })
 
@@ -149,6 +153,7 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
 
     if (!valid && this._resolve) {
       this._resolve(this)
+      this._sourceLoad = undefined
       this._resolve = undefined
       this._reject = undefined
     }
@@ -221,67 +226,61 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
 
   protected _videoFrameRequestCallback = (): void => {
     this.update()
-
-    if (this.destroyed) {
-      this._requestId = undefined
-    } else {
-      this._requestId = this.source.requestVideoFrameCallback(this._videoFrameRequestCallback)
-    }
+    this._requestId = this.source.requestVideoFrameCallback(this._videoFrameRequestCallback)
   }
 
   update = (): void => {
-    if (!this.destroyed) {
-      const elapsed = Math.floor(Ticker.instance.elapsed * this.source.playbackRate)
-      this._nextTime -= elapsed
-      if (!this._spf || this._nextTime <= 0) {
-        super.update()
-        this._nextTime = this._spf || 0
-      }
+    const elapsed = Math.floor(Ticker.instance.elapsed * this.source.playbackRate)
+    this._nextTime -= elapsed
+    if (!this._spf || this._nextTime <= 0) {
+      super.updateSource()
+      this._nextTime = this._spf || 0
     }
   }
 
-  load(): Promise<this> {
-    if (this._load) {
-      return this._load
-    }
+  async load(): Promise<this> {
+    if (!this._sourceLoad) {
+      const source = this.source
 
-    const source = this.source
+      if (
+        (
+          source.readyState === source.HAVE_ENOUGH_DATA
+          || source.readyState === source.HAVE_FUTURE_DATA
+        )
+        && source.width
+        && source.height
+      ) {
+        (source as any).complete = true
+      }
 
-    if (
-      (
-        source.readyState === source.HAVE_ENOUGH_DATA
-        || source.readyState === source.HAVE_FUTURE_DATA
-      )
-      && source.width
-      && source.height
-    ) {
-      (source as any).complete = true
-    }
+      source.addEventListener('play', this._onPlayStart)
+      source.addEventListener('pause', this._onPlayStop)
+      source.addEventListener('seeked', this._onSeeked)
 
-    source.addEventListener('play', this._onPlayStart)
-    source.addEventListener('pause', this._onPlayStop)
-    source.addEventListener('seeked', this._onSeeked)
-
-    if (!this.isReady) {
-      source.addEventListener('canplay', this._onCanPlay)
-      source.addEventListener('canplaythrough', this._onCanPlay)
-      source.addEventListener('error', this._onError, true)
-    } else {
-      this._onCanPlay()
-    }
-
-    return this._load = new Promise((resolve, reject): void => {
-      if (this.valid) {
-        resolve(this)
+      if (!this.isReady) {
+        source.addEventListener('canplay', this._onCanPlay)
+        source.addEventListener('canplaythrough', this._onCanPlay)
+        source.addEventListener('error', this._onError, true)
       } else {
-        this._resolve = resolve
-        this._reject = reject
-        source.load()
+        this._onCanPlay()
       }
-    })
+
+      this._sourceLoad = new Promise((resolve, reject) => {
+        if (this.valid) {
+          this._sourceLoad = undefined
+          resolve(this)
+        } else {
+          this._resolve = resolve
+          this._reject = reject
+          source.load()
+        }
+      })
+    }
+
+    return this._sourceLoad
   }
 
-  override dispose(): void {
+  dispose(): void {
     this._setupAutoUpdate()
     const source = this.source
     if (source) {
@@ -295,6 +294,5 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
       source.src = ''
       source.load()
     }
-    super.dispose()
   }
 }

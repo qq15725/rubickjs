@@ -1,4 +1,4 @@
-import { Animation, Assets, Canvas, Effect, Label, Node2D, Sprite } from 'rubickjs'
+import { Animation, Canvas, Effect, Image, Node2D, Text } from 'rubickjs'
 
 const canvas = new Canvas().observe()
 
@@ -9,29 +9,29 @@ view.style.height = '100vh'
 document.body.append(view)
 
 // text
-const text = new Label('Hello, World!', {
+const text = new Text('Hello, World!', {
   fontSize: 22,
   color: 'red',
   textDecoration: 'underline',
 })
+text.width = 200
+text.height = 100
 text.x = 100
 text.y = 100
-canvas.appendChild(text)
-
-const texture = Assets.load<any>('https://pixijs.com/assets/bunny.png')
+canvas.addChild(text)
 
 // sprite
-const bunny = new Sprite(texture)
-canvas.appendChild(bunny)
+const bunny = new Image('https://pixijs.com/assets/bunny.png')
+canvas.addChild(bunny)
 
 // group
 const group = new Node2D()
 group.x = 400
 group.y = 100
 for (let i = 0; i < 5; i++) {
-  const item = new Sprite(texture)
+  const item = new Image('https://pixijs.com/assets/bunny.png')
   item.x = i * 10
-  group.appendChild(item)
+  group.addChild(item)
 }
 
 // effect
@@ -45,7 +45,7 @@ const effect = new Effect({
 }`,
 })
 
-group.appendChild(
+group.addChild(
   new Animation({
     startTime: 5000,
     duration: 10000,
@@ -59,7 +59,7 @@ group.appendChild(
   }),
 )
 
-canvas.appendChild(group)
+canvas.addChild(group)
 
 canvas.timeline.on('update', (_, delta) => {
   text.rotation += 0.005 * delta

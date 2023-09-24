@@ -1,13 +1,15 @@
 import { QuadUvGeometry } from './geometries'
-import { Viewport } from './viewports'
+import { Root } from './viewports'
 import { MainLoop } from './MainLoop'
 import { Timer } from './Timer'
 import { RenderQueue } from './RenderQueue'
+import { InternalMode } from './Node'
+import type { Viewport } from './viewports'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
 
 export class SceneTree extends MainLoop {
-  readonly root!: Viewport
+  readonly root = new Root(true)._setTree(this)
   readonly renderQueue = new RenderQueue()
 
   protected _currentViewport?: Viewport
@@ -15,29 +17,21 @@ export class SceneTree extends MainLoop {
   setCurrentViewport(viewport: Viewport | undefined) { this._currentViewport = viewport }
 
   constructor(
-    public timeline = new Timer(),
+    readonly timeline = new Timer(),
   ) {
     super()
-    const root = new Viewport(true)
-    root.tree = this
-    this.root = root
+    this.root.addChild(timeline, InternalMode.FRONT)
   }
 
   input(event: UIInputEvent): void {
     this.root.input(event)
   }
 
-  render(renderer: WebGLRenderer, elapsedTime: number): void {
-    const renderQueue = this.renderQueue
-    this.emit('processStart')
-    this.root.process({
-      elapsedTime,
-      currentTime: this.timeline.addTime(elapsedTime),
-      renderQueue,
-    })
-    this.emit('processEnd')
+  render(renderer: WebGLRenderer): void {
+    this.emit('processFrame')
+    this.root.notification('process')
     renderer.uniforms.projectionMatrix = this.root.projection.toArray(true)
-    renderQueue.handle(renderer)
+    this.renderQueue.handle(renderer)
     this._renderToScreen(renderer)
   }
 

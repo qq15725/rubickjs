@@ -1,22 +1,25 @@
 import { Vector2 } from '@rubickjs/math'
-import { Ref, isImageElement, isVideoElement } from '@rubickjs/shared'
 import { Resource } from '../Resource'
 import type { WebGLRenderer, WebGLTextureFilterMode, WebGLTextureWrapMode } from '@rubickjs/renderer'
 
 export type TextureFilterMode = WebGLTextureFilterMode
 export type TextureWrapMode = WebGLTextureWrapMode
-export type TextureSource = TexImageSource | {
+export type TexturePixelsSource = {
   width: number
   height: number
-  pixels: ArrayBufferView | null
+  pixels: Uint8Array | null
 }
+export type TextureSource = TexImageSource | TexturePixelsSource
 
 export class Texture<T extends TextureSource = TextureSource> extends Resource {
-  /** Texture source */
-  readonly source: T
+  /** Empty texture */
+  static get EMPTY() { return new this({ width: 1, height: 1, pixels: null }) }
+
+  /** White texture */
+  static get WHITE() { return new this({ width: 1, height: 1, pixels: new Uint8Array([255, 255, 255, 255]) }) }
 
   /** Texture width and height */
-  readonly _size = new Vector2(0, 0)
+  protected _size = new Vector2(0, 0)
   get size(): Vector2 { return this._size }
   set size(val: { x: number; y: number }) { this._size.update(val.x, val.y) }
   get width() { return this._size.x }
@@ -25,39 +28,42 @@ export class Texture<T extends TextureSource = TextureSource> extends Resource {
   set height(val) { this._size.y = val }
   get valid(): boolean { return Boolean(this._size[0] && this._size[1]) }
 
-  /** Texture filter mode */
-  protected readonly _filterMode = new Ref<TextureFilterMode>('linear')
-  get filterMode() { return this._filterMode.value }
-  set filterMode(val) { this._filterMode.value = val }
-
-  /** Texture wrap mode */
-  protected readonly _wrapMode = new Ref<TextureWrapMode>('repeat')
-  get wrapMode() { return this._wrapMode.value }
-  set wrapMode(val) { this._wrapMode.value = val }
-
-  /** Pixel ratio */
-  protected readonly _pixelRatio = new Ref(1)
-  get pixelRatio() { return this._pixelRatio.value }
-  set pixelRatio(val) { this._pixelRatio.value = val }
-
-  constructor(
-    source: T,
-  ) {
-    super()
-
-    this.source = source
-
-    this.update()
-
-    this.size.onUpdate(this._onUpdateSize.bind(this))
-
-    if (isVideoElement(source) || isImageElement(source)) {
-      this.name = source.src
+  /** Filter mode */
+  protected _filterMode: TextureFilterMode = 'linear'
+  get filterMode() { return this._filterMode }
+  set filterMode(val) {
+    if (this._filterMode === val) {
+      this._filterMode = val
+      this.addDirty('filterMode')
     }
   }
 
-  protected _onUpdateSize() {
-    this.addDirty('size')
+  /** Wrap mode */
+  protected _wrapMode: TextureWrapMode = 'clamp_to_edge'
+  get wrapMode() { return this._wrapMode }
+  set wrapMode(val) {
+    if (this._wrapMode !== val) {
+      this._wrapMode = val
+      this.addDirty('wrapMode')
+    }
+  }
+
+  /** Pixel ratio */
+  protected _pixelRatio = 1
+  get pixelRatio() { return this._pixelRatio }
+  set pixelRatio(val) {
+    if (this._pixelRatio !== val) {
+      this._pixelRatio = val
+      this.addDirty('pixelRatio')
+    }
+  }
+
+  constructor(
+    public source: T,
+  ) {
+    super()
+    this.updateSource()
+    this.size.onUpdate(this._onUpdateSize.bind(this))
   }
 
   protected _getSouce(): TextureSource {
@@ -65,22 +71,12 @@ export class Texture<T extends TextureSource = TextureSource> extends Resource {
   }
 
   glTextureProps() {
-    let source = this._getSouce()
-
-    if ('pixels' in source) {
-      source = {
-        width: this.size.x * this.pixelRatio,
-        height: this.size.y * this.pixelRatio,
-        pixels: source.pixels,
-      }
-    }
-
     return {
       index: 0,
       target: 'texture_2d' as const,
-      source,
-      filterMode: this._filterMode.value,
-      wrapMode: this._wrapMode.value,
+      source: this._getSouce(),
+      filterMode: this._filterMode,
+      wrapMode: this._wrapMode,
     }
   }
 
@@ -90,22 +86,28 @@ export class Texture<T extends TextureSource = TextureSource> extends Resource {
     })
   }
 
-  update(): void {
+  protected _onUpdateSize() {
+    if ('pixels' in this.source && !this.source.pixels) {
+      const source = this.source as TexturePixelsSource
+      const pixelRatio = this.pixelRatio
+      const [width, height] = this._size
+      source.width = width * pixelRatio
+      source.height = height * pixelRatio
+    }
+    this.addDirty('size')
+  }
+
+  updateSource() {
     const source = this.source as any
-
-    this._size.update(
-      Number(source.naturalWidth || source.videoWidth || source.width || 0),
-      Number(source.naturalHeight || source.videoHeight || source.height || 0),
-    )
-
+    const width = Number(source.naturalWidth || source.videoWidth || source.width || 0)
+    const height = Number(source.naturalHeight || source.videoHeight || source.height || 0)
+    const pixelRatio = this._pixelRatio
+    this._size.update(width / pixelRatio, height / pixelRatio)
     this.addDirty('source')
   }
 
   upload(renderer: WebGLRenderer) {
-    if (!this.isDirty) {
-      return
-    }
-
+    if (!this.isDirty) return
     this.clearDirty()
 
     renderer.updateTexture(

@@ -1,71 +1,151 @@
 import { clamp } from '@rubickjs/math'
-import { Resource } from './Resource'
-import type { RenderQueue } from './RenderQueue'
+import { BaseObject } from './BaseObject'
 import type { SceneTree } from './SceneTree'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
 
-export interface NodeProcessContext {
-  elapsedTime: number
-  currentTime: number
-  renderQueue: RenderQueue
+export enum InternalMode {
+  DISABLED = 0,
+  FRONT = 1,
+  BACK = 2,
 }
 
-export class Node extends Resource {
-  /** Scene tree */
-  protected _tree?: SceneTree
-  get tree() { return this._tree }
-  set tree(val) {
-    const oldVal = this._tree
-    if (val === oldVal) return
+export class Node extends BaseObject {
+  /** @internal */
+  _internalMode = InternalMode.DISABLED
 
-    if (val) {
-      this._tree = val
-      this._enterTree(val)
-      this.emit('enterTree', val)
-    } else if (oldVal) {
-      this.emit('exitTree', val)
-      this._exitTree(oldVal)
-      this._tree = val
-    }
-
-    for (let len = this.childNodes.length, i = 0; i < len; i++) {
-      this.childNodes[i].tree = val
-    }
+  /** Name */
+  protected _name = this.getClass()
+  get name() { return this._name }
+  set name(val) { this.setName(val) }
+  getName() { return this._name }
+  setName(name: string): this {
+    this._name = name
+    this.notification('pathRenamed')
+    return this
   }
 
-  /** Parent node */
-  protected _parentNode?: Node
-  get parentNode() { return this._parentNode }
-  set parentNode(val) {
-    if (val !== this._parentNode) {
-      this._parentNode = val
+  /** Tree */
+  protected _readyed = false
+  protected _tree: SceneTree | null = null
+  getTree() { return this._tree }
+  getViewport() { return this._tree?.getCurrentViewport() }
+  getWindow() { return this._tree?.root }
+  isInsideTree() { return Boolean(this._tree) }
+  /** @internal */
+  _setTree(tree: SceneTree | null): this {
+    const oldTree = this._tree
+    if (tree !== oldTree) {
+      if (tree) {
+        this._tree = tree
+        this.notification('enterTree')
+        this.emit('treeEntered')
+      } else if (oldTree) {
+        this.emit('treeExiting')
+        this.notification('exitTree')
+        this._tree = tree
+        this.emit('treeExited')
+      }
+
+      for (let len = this._children.length, i = 0; i < len; i++) {
+        const node = this._children[i]
+        !tree && this.emit('childExitingTree', node)
+        node._setTree(tree)
+        tree && this.emit('childEnteredTree', node)
+      }
+
+      if (tree) {
+        this.notification('postEnterTree')
+        if (!this._readyed) {
+          this._readyed = true
+          this.notification('ready')
+          this.emit('ready')
+        }
+      }
     }
+
+    return this
   }
 
-  /** Child nodes */
-  childNodes: Node[] = []
-  get siblingIndex(): number { return this._parentNode?.childNodes.indexOf(this) ?? 0 }
-  set siblingIndex(index) {
-    if (!this._parentNode) {
-      return
-    }
-    const siblings = this._parentNode.childNodes
-    const oldIndex = siblings.indexOf(this)
-    if (index !== oldIndex) {
-      oldIndex > -1 && siblings.splice(oldIndex, 1)
-      if (index > -1 && index < siblings.length) {
-        siblings.splice(index, 0, this)
+  /** Parent */
+  protected _parent: Node | null = null
+  getParent(): Node | null { return this._parent }
+  /** @internal */
+  _setParent(parent: Node | null): this {
+    if (parent !== this._parent) {
+      this._parent = parent
+      if (parent) {
+        this.notification('parented')
       } else {
-        siblings.push(this)
+        this.notification('unparented')
+      }
+    }
+    return this
+  }
+
+  /** Children */
+  protected _children: Array<Node> = []
+  getChildren(includeInternal = false): Array<Node> {
+    if (includeInternal) {
+      return this._children
+    }
+    return this._children.filter(child => child._internalMode === InternalMode.DISABLED)
+  }
+
+  getIndex(includeInternal = false) {
+    return this._parent?.getChildren(includeInternal).indexOf(this) ?? 0
+  }
+
+  moveChild(childNode: Node, toIndex: number) {
+    const children = this._children
+    const oldIndex = children.indexOf(childNode)
+
+    let minIndex = children.findIndex(child => {
+      switch (childNode._internalMode) {
+        case InternalMode.DISABLED:
+          return child._internalMode !== InternalMode.FRONT
+        case InternalMode.BACK:
+          return child._internalMode === InternalMode.BACK
+        case InternalMode.FRONT:
+        default:
+          return true
+      }
+    })
+    minIndex = minIndex > -1 ? minIndex : children.length - 1
+
+    let maxIndex = children.slice(minIndex).findIndex(child => {
+      switch (childNode._internalMode) {
+        case InternalMode.FRONT:
+          return child._internalMode !== InternalMode.FRONT
+        case InternalMode.DISABLED:
+          return child._internalMode === InternalMode.BACK
+        case InternalMode.BACK:
+        default:
+          return false
+      }
+    })
+    maxIndex = maxIndex > -1 ? (minIndex + maxIndex) : children.length - 1
+
+    const index = clamp(minIndex, toIndex > -1 ? toIndex : maxIndex, maxIndex)
+    if (index !== oldIndex) {
+      oldIndex > -1 && children.splice(oldIndex, 1)
+      if (index > -1 && index < children.length) {
+        children.splice(index, 0, childNode)
+      } else {
+        children.push(childNode)
       }
     }
   }
 
-  get previousSibling(): Node | undefined { return this._parentNode?.childNodes[this.siblingIndex - 1] }
-  get nextSibling(): Node | undefined { return this._parentNode?.childNodes[this.siblingIndex + 1] }
-  get firstSibling(): Node | undefined { return this._parentNode?.childNodes[0] }
-  get lastSibling(): Node | undefined { return this._parentNode?.childNodes[this._parentNode?.childNodes.length - 1] }
+  get siblingIndex(): number { return this.getIndex() }
+  set siblingIndex(toIndex) { this._parent?.moveChild(this, toIndex) }
+  get previousSibling(): Node | undefined { return this._parent?.getChildren()[this.getIndex() - 1] }
+  get nextSibling(): Node | undefined { return this._parent?.getChildren()[this.getIndex() + 1] }
+  get firstSibling(): Node | undefined { return this._parent?.getChildren()[0] }
+  get lastSibling(): Node | undefined {
+    const children = this._parent?.getChildren()
+    return children ? children[children.length - 1] : undefined
+  }
 
   /** Visibility */
   visible = true
@@ -87,104 +167,139 @@ export class Node extends Resource {
   protected _globalVisible = this.visible
   isVisible(): boolean { return this._globalVisible }
 
-  updateVisibility(currentTime: number) {
+  updateVisibility() {
+    const tree = this._tree
+    if (!tree) return
+    const currentTime = tree.timeline.currentTime
     let visible = this.visible
-      && this.parentNode?.isVisible() !== false
-    if (visible && this._tree) {
+      && this.getParent()?.isVisible() !== false
+    if (visible) {
       visible = this.visibleStartTime <= currentTime
         && currentTime <= this.visibleEndTime
     }
     this._globalVisible = visible
   }
 
-  /** Whether this node can be rendered */
   protected _renderable = false
   needsRender(): boolean { return this._renderable && this.isVisible() }
 
-  /** Process node with child nodes status updates before rendering */
-  process(context: NodeProcessContext): void {
-    this.updateVisibility(context.currentTime)
-    this._process(context)
-    context.renderQueue.push(this, undefined, false)
-    this._processChildNodes(context)
-    context.renderQueue.pushEnd(this)
-  }
-
-  protected _processChildNodes(context: NodeProcessContext) {
-    for (let len = this.childNodes.length, i = 0; i < len; i++) {
-      this.childNodes[i].process(context)
+  override notification(what: string) {
+    super.notification(what)
+    switch (what) {
+      case 'enterTree':
+        this._enterTree()
+        break
+      case 'exitTree':
+        this._exitTree()
+        break
+      case 'ready':
+        this._ready()
+        break
+      case 'process': {
+        this.updateVisibility()
+        const tree = this._tree
+        tree?.renderQueue.push(this, false)
+        this._process(tree?.processDeltaTime ?? 0)
+        for (let len = this._children.length, i = 0; i < len; i++) {
+          this._children[i].notification('process')
+        }
+        tree?.renderQueue.emitPushed(this)
+        break
+      }
+      case 'postEnterTree':
+      case 'parented':
+      case 'unparented':
+      case 'pathRenamed':
+        break
     }
   }
 
-  /**
-   * Render node with child nodes
-   * @param renderer
-   */
   render(renderer: WebGLRenderer): void {
     this._render(renderer)
   }
 
-  /**
-   * Handle input event
-   */
   input(event: UIInputEvent): void {
-    for (let i = this.childNodes.length - 1; i >= 0; i--) {
-      this.childNodes[i].input(event)
+    for (let i = this._children.length - 1; i >= 0; i--) {
+      this._children[i].input(event)
     }
-
     this._input(event)
   }
 
-  getNode(selector: string): Node | undefined {
-    return this.childNodes.find(child => child.name === selector)
+  getProcessDeltaTime() {
+    return this._tree?.processDeltaTime ?? 0
   }
 
-  /**
-   * Adds a child node.
-   * Nodes can have any number of childNodes, but every child must have a unique id.
-   * Child nodes are automatically deleted when the parent node is deleted, so an entire scene can be removed by deleting its topmost node.
-   */
-  appendChild<T extends Node, D extends Node>(node: T, previousSibling?: D): boolean {
-    if (
-      node.parentNode
-      || (previousSibling && previousSibling.parentNode !== this)
-    ) {
-      return false
+  getNode(path: string): Node | undefined {
+    return this._children.find(child => child.name === path)
+  }
+
+  addChild(node: Node, internal = InternalMode.DISABLED): this {
+    if (this !== node && !node.getParent()) {
+      const children = this.getChildren(true)
+      switch (internal) {
+        case InternalMode.DISABLED: {
+          const index = children.findIndex(child => child._internalMode === InternalMode.BACK)
+          if (index > -1) {
+            children.splice(index, 0, node)
+          } else {
+            children.push(node)
+          }
+          break
+        }
+        case InternalMode.FRONT: {
+          let index = children.findIndex(child => child._internalMode !== InternalMode.FRONT)
+          index = index > -1 ? index + 1 : children.length - 1
+          children.splice(index, 0, node)
+          break
+        }
+        case InternalMode.BACK:
+          children.push(node)
+          break
+      }
+      node._internalMode = internal
+      node._setParent(this)
+      node._setTree(this._tree)
     }
-    node.parentNode = this
-    node.siblingIndex = previousSibling
-      ? (previousSibling.siblingIndex + 1)
-      : this.childNodes.length
-    node.tree = this.tree
-    return true
+    return this
   }
 
-  /**
-   * Removes a child node.
-   * The node is NOT deleted and must be deleted manually.
-   *
-   * @param node
-   */
-  removeChild<T extends Node>(node: T): boolean {
-    const siblingIndex = node.siblingIndex
-    if (node.parentNode !== this || siblingIndex < 0) {
-      return false
+  addSibling(sibling: Node): this {
+    if (this._parent && !sibling.getParent()) {
+      this._parent._children.splice(
+        this.getIndex(true) + 1,
+        0,
+        sibling,
+      )
+      sibling._internalMode = this._internalMode
+      sibling._setParent(this._parent)
+      sibling._setTree(this._parent._tree)
     }
-    this.childNodes.splice(siblingIndex, 1)
-    node.parentNode = undefined
-    node.tree = undefined
-    return true
+    return this
   }
 
-  /** Hooks */
-  /** Hook for process node status */
-  protected _process(_context: NodeProcessContext): void { /** override */ }
-  /** Hook for input event */
+  removeChild<T extends Node>(node: T): this {
+    const index = node.getIndex(true)
+    if (node.getParent() === this && index > -1) {
+      this._children.splice(index, 1)
+      node._setParent(null)
+      node._setTree(null)
+    }
+    return this
+  }
+
+  printTree(prefix = '') {
+    prefix = `${ prefix ? `${ prefix }/` : '' }${ this.name }`
+    for (let len = this._children.length, i = 0; i < len; i++) {
+      // eslint-disable-next-line no-console
+      console.log(`${ prefix }/${ this._children[i].name }`)
+      this._children[i].printTree(prefix)
+    }
+  }
+
+  protected _enterTree(): void { /** override */ }
+  protected _ready(): void { /** override */ }
+  protected _exitTree(): void { /** override */ }
+  protected _process(_delta: number): void { /** override */ }
   protected _input(_event: UIInputEvent): void { /** override */ }
-  /** Hook for render node */
   protected _render(_renderer: WebGLRenderer): void { /** override */ }
-  /** Hook for enter scene tree */
-  protected _enterTree(_tree: SceneTree): void { /** override */ }
-  /** Hook for exit scene tree */
-  protected _exitTree(_tree: SceneTree): void { /** override */ }
 }

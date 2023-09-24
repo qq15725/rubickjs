@@ -1,9 +1,7 @@
 import { IN_BROWSER, Ref } from '@rubickjs/shared'
-import { Rectangle } from '@rubickjs/math'
-import { PixelsTexture, Texture } from '@rubickjs/core'
-import { LabelStyle } from './styles'
+import { Texture } from '@rubickjs/core'
+import { TextStyle } from './TextStyle'
 import { Sprite } from './Sprite'
-import type { NodeProcessContext } from '@rubickjs/core'
 import type { ColorValue } from '@rubickjs/color'
 
 export type FontWeight = 'normal' | 'bold' | 'lighter' | 'bolder' | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
@@ -13,25 +11,26 @@ export type TextAlign = 'center' | 'end' | 'left' | 'right' | 'start'
 export type TextBaseline = 'alphabetic' | 'bottom' | 'hanging' | 'ideographic' | 'middle' | 'top'
 export type TextDecoration = 'underline' | 'line-through'
 
-export class Label extends Sprite {
-  /**
-   * All characters in text
-   *
-   * boundingBox: Rectangle(x: 0 - 1, y: 0 - 1, width: 0 - 1, height: 0 - 1)
-   */
-  characters: Array<{
-    value: string
-    boundingBox: Rectangle
-  }> = []
+export interface TextParagraph extends TextChar {
+  chars: Array<TextChar>
+}
+
+export interface TextChar {
+  x: number
+  y: number
+  width: number
+  height: number
+  text: string
+}
+
+export class Text extends Sprite<Texture<HTMLCanvasElement>> {
+  protected _paragraphs: Array<TextParagraph> = []
+  get paragraphs() { return this._paragraphs }
 
   /** Pixel ratio */
   protected readonly _pixelRatio = new Ref(2)
   get pixelRatio() { return this._pixelRatio.value }
   set pixelRatio(val) { this._pixelRatio.value = val }
-
-  protected _canvas = IN_BROWSER
-    ? document.createElement('canvas')
-    : undefined
 
   protected _color = new Ref<ColorValue>('#000000')
   get color() { return this._color.value }
@@ -80,12 +79,19 @@ export class Label extends Sprite {
   /**
    * Style
    */
-  protected override _style = new LabelStyle(this)
+  protected override _style = new TextStyle(this)
 
-  constructor(text: string, style?: Record<string, any>) {
-    super(PixelsTexture.EMPTY)
+  constructor(
+    text: string,
+    style?: Record<string, any>,
+  ) {
+    super(
+      IN_BROWSER
+        ? new Texture(document.createElement('canvas'))
+        : undefined,
+    )
 
-    const _onUpdate = this._onNeedsUpdateTextTexture.bind(this)
+    const _onUpdate = this.scheduleUpdateTexture.bind(this)
     this._pixelRatio.on('update', _onUpdate)
     this._color.on('update', _onUpdate)
     this._fontSize.on('update', _onUpdate)
@@ -103,36 +109,78 @@ export class Label extends Sprite {
     style && (this.style = style as any)
   }
 
-  protected _onNeedsUpdateTextTexture() {
-    this.addDirty('textTexture')
+  protected override _onUpdateTexture() {
+    super._onUpdateTexture(false)
   }
 
   protected override _onUpdateSize() {
     super._onUpdateSize()
-    this._onNeedsUpdateTextTexture()
+    this.scheduleUpdateTexture()
   }
 
-  protected _updateTextTexture() {
-    if (!this.hasDirty('textTexture')) {
-      return
+  scheduleUpdateTexture() { this.addDirty('texture') }
+
+  updateParagraphs(context: CanvasRenderingContext2D) {
+    const width = this.width
+    const fontSize = this.fontSize
+    const charHeight = fontSize * 1.2
+    const paragraphs: Array<TextParagraph> = []
+    let chars: Array<TextChar> = []
+    let offsetX = 0
+    let offsetY = 0
+
+    const addParagraph = () => {
+      paragraphs.push({
+        x: offsetX,
+        y: offsetY,
+        width: chars.reduce((width, char) => width + char.width, 0),
+        height: charHeight,
+        text: chars.reduce((text, char) => text + char.text, ''),
+        chars,
+      })
+      offsetX = 0
+      offsetY += charHeight
+      chars = []
     }
 
-    this.deleteDirty('textTexture')
+    this.text.split(/[\r\n]+/).forEach(text => {
+      for (const char of text) {
+        const charWidth = context.measureText(char).width || fontSize
+        if (offsetX + charWidth > width) {
+          addParagraph()
+        }
+        chars.push({
+          text: char,
+          x: offsetX,
+          y: offsetY,
+          width: charWidth,
+          height: charHeight,
+        })
+        offsetX += charWidth
+      }
+      addParagraph()
+    })
 
-    const canvas = this._canvas
-
-    if (!canvas) {
-      console.warn('Failed to _updateTextTexture')
-      return
+    if (chars.length) {
+      addParagraph()
     }
+
+    this._paragraphs = paragraphs
+  }
+
+  updateTexture() {
+    if (!this.hasDirty('texture')) return
+    this.deleteDirty('texture')
+
+    const canvas = this._texture.source
 
     const context = canvas.getContext('2d')
-
     if (!context) {
-      console.warn('Failed to getContext(\'2d\') in _updateTextTexture')
+      console.warn('Failed to getContext(\'2d\') in updateTexture')
       return
     }
 
+    const [width, height] = this.size
     const pixelRatio = this.pixelRatio
     const fontSize = this.fontSize
     const font = `${ this.fontStyle } ${ this.fontWeight } ${ fontSize }px ${ this.fontFamily }`
@@ -141,32 +189,21 @@ export class Label extends Sprite {
     context.textAlign = this.textAlign
     context.font = font
 
-    const paragraphs = this.text
-      .split(/[\r\n]+/)
-      .map(text => ({
-        text,
-        x: 0,
-        y: 0,
-        width: context.measureText(text).width,
-        height: fontSize * 1.2,
-      }))
+    this.updateParagraphs(context)
 
-    const [textWidth, textHeight] = paragraphs
+    const paragraphs = this._paragraphs
+
+    const [, textHeight] = paragraphs
       .reduce((size, paragraph) => {
         size[0] = Math.max(size[0], paragraph.width)
         size[1] += paragraph.height
         return size
       }, [0, 0])
 
-    const [rawWidth, rawHeight] = this.size
-
-    const width = rawWidth <= 1 ? textWidth : rawWidth
-    const height = rawHeight <= 1 ? textHeight : rawHeight
-
     canvas.style.width = `${ width }px`
     canvas.style.height = `${ height }px`
-    canvas.width = Math.max(1, Math.ceil(width * pixelRatio))
-    canvas.height = Math.max(1, Math.ceil(height * pixelRatio))
+    canvas.width = Math.max(1, Math.floor(width * pixelRatio))
+    canvas.height = Math.max(1, Math.floor(height * pixelRatio))
     context.strokeStyle = context.fillStyle = this.color as string
     context.lineWidth = 2
     context.direction = this.direction
@@ -237,35 +274,11 @@ export class Label extends Sprite {
       y += paragraph.height
     })
 
-    this.size.update(width, height)
-    this.updateTexture(new Texture(canvas), false)
-
-    // calc characters bbox
-    this.characters.length = 0
-    paragraphs.forEach(paragraph => {
-      let offsetX = 0
-      for (const char of paragraph.text) {
-        const charWidth = context.measureText(char).width || fontSize
-        const charHeight = fontSize * 1.2
-        const boundingBox = new Rectangle(
-          paragraph.x + offsetX,
-          paragraph.y / textHeight,
-          charWidth / textWidth,
-          charHeight / textHeight,
-        )
-        offsetX += boundingBox.width
-        if (char.trim()) {
-          this.characters.push({
-            value: char,
-            boundingBox,
-          })
-        }
-      }
-    })
+    this._texture.updateSource()
   }
 
-  protected override _process(context: NodeProcessContext) {
-    this._updateTextTexture()
-    super._process(context)
+  protected override _process(delta: number) {
+    this.updateTexture()
+    super._process(delta)
   }
 }

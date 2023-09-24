@@ -4,7 +4,13 @@ export const SUPPORTS_POINTER_EVENTS = 'PointerEvent' in globalThis
 export const SUPPORTS_WHEEL_EVENTS = 'WheelEvent' in globalThis
 export const SUPPORTS_MOUSE_EVENTS = 'MouseEvent' in globalThis
 export const SUPPORTS_TOUCH_EVENTS = 'ontouchstart' in globalThis
+export const SUPPORTS_CLICK_EVENTS = 'onclick' in globalThis
 export const SUPPORTS_CREATE_IMAGE_BITMAP = 'createImageBitmap' in globalThis
+export const SUPPORTS_AUDIO_CONTEXT = 'AudioContext' in globalThis
+export const SUPPORTS_WEBKIT_AUDIO_CONTEXT = 'webkitAudioContext' in globalThis
+export const SUPPORTS_OFFLINE_AUDIO_CONTEXT = 'OfflineAudioContext' in globalThis
+export const SUPPORTS_WEBKIT_OFFLINE_AUDIO_CONTEXT = 'webkitOfflineAudioContext' in globalThis
+export const SUPPORTS_WEB_AUDIO = SUPPORTS_AUDIO_CONTEXT || SUPPORTS_WEBKIT_AUDIO_CONTEXT
 
 export const IN_BROWSER = typeof window !== 'undefined'
 export const DEVICE_PIXEL_RATIO = globalThis.devicePixelRatio || 1

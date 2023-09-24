@@ -3,7 +3,6 @@ import { QuadUvGeometry } from '../geometries'
 import { UvMaterial } from '../materials'
 import { ViewportTexture } from '../textures'
 import { Node } from '../Node'
-import type { NodeProcessContext } from '../Node'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { Vector2 } from '@rubickjs/math'
 
@@ -13,8 +12,8 @@ export class Viewport extends Node {
   /** Framebuffers */
   protected _framebufferIndex = 0
   protected _framebuffers = [
-    { texture: new ViewportTexture({ width: 1, height: 1, pixels: null }) },
-    { texture: new ViewportTexture({ width: 1, height: 1, pixels: null }) },
+    { texture: new ViewportTexture() },
+    { texture: new ViewportTexture() },
   ] as const
 
   get framebuffer() { return this._framebuffers[this._framebufferIndex] }
@@ -65,7 +64,8 @@ export class Viewport extends Node {
     })
   }
 
-  update(renderer: WebGLRenderer) {
+  upload(renderer: WebGLRenderer) {
+    if (!this.isDirty) return
     this.clearDirty()
     renderer.updateFramebuffer(
       this.glFramebuffer(renderer),
@@ -86,15 +86,12 @@ export class Viewport extends Node {
     renderer.activeFramebuffer(this.glFramebuffer(renderer), () => {
       const [width, height] = this.size
       this._framebuffers.forEach(framebuffer => {
-        framebuffer.texture.pixelRatio = renderer.pixelRatio
-        framebuffer.texture.size.update(width, height)
-        if (framebuffer.texture.isDirty) {
-          framebuffer.texture.upload(renderer)
-        }
+        const texture = framebuffer.texture
+        texture.pixelRatio = renderer.pixelRatio
+        texture.size.update(width, height)
+        texture.upload(renderer)
       })
-      if (this.isDirty) {
-        this.update(renderer)
-      }
+      this.upload(renderer)
       renderer.updateViewport(
         0, 0,
         width * renderer.pixelRatio, height * renderer.pixelRatio,
@@ -141,10 +138,17 @@ export class Viewport extends Node {
     })
   }
 
-  override process(context: NodeProcessContext): void {
-    this._renderCallId = 0
-    super.process(context)
-    context.renderQueue.push(this)
+  override notification(what: string) {
+    switch (what) {
+      case 'process':
+        this._renderCallId = 0
+        super.notification(what)
+        this._tree?.renderQueue.push(this, false)
+        break
+      default:
+        super.notification(what)
+        break
+    }
   }
 
   protected override _render(renderer: WebGLRenderer) {

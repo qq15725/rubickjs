@@ -1,3 +1,4 @@
+import { clamp } from '@rubickjs/math'
 import { Node } from './Node'
 
 export class Timer extends Node {
@@ -29,19 +30,24 @@ export class Timer extends Node {
     )
   }
 
-  addTime(delta: number): number {
+  protected _addTime(delta: number): number {
+    const startTime = this._startTime
     const endTime = this._endTime
     let time = this.currentTime
     time += delta
     if (this.loop) {
       if (time > endTime) {
-        time = (time % endTime) + this.startTime
+        time = (time % endTime) + startTime
       }
-    } else {
-      time = Math.min(time, endTime)
     }
+    time = clamp(startTime, time, endTime)
     this.currentTime = time
     this.emit('update', time, delta)
     return time
+  }
+
+  protected _process(delta: number) {
+    super._process(delta)
+    this._addTime(delta)
   }
 }

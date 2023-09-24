@@ -1,6 +1,5 @@
 import { imageLoader, videoLoader } from './loaders'
 import type { Loader, UrlInfo } from './Loader'
-import type { Resource } from '@rubickjs/core'
 
 export class Assets {
   static readonly EXT_TO_MIME_TYPE = new Map<string, string>([
@@ -25,10 +24,6 @@ export class Assets {
     imageLoader,
     videoLoader,
   ])
-
-  static get<T = Resource>(url: string): T | undefined {
-    return this.resources.get(url)
-  }
 
   protected static _matchLoader(info: UrlInfo) {
     for (const loader of this.loaders) {
@@ -64,7 +59,9 @@ export class Assets {
     return { url, path, query, ext, mime }
   }
 
-  static async load<T = Resource>(url: string): Promise<T> {
+  static get<T = any>(url: string): T | undefined { return this.resources.get(url) }
+
+  static async load<T = any>(url: string): Promise<T> {
     const resource = this.get<T>(url)
 
     if (resource) {

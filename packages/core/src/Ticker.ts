@@ -1,9 +1,9 @@
-import { Resource } from './Resource'
+import { BaseObject } from './BaseObject'
 
-export class Ticker extends Resource {
+export class Ticker extends BaseObject {
   static instance = new Ticker()
 
-  lastTime = 0
+  currentTime = 0
   elapsed = 0
 
   protected _requestId?: number
@@ -14,16 +14,16 @@ export class Ticker extends Resource {
     this.start()
   }
 
-  protected _tick = (time: number) => {
-    this.elapsed = time - this.lastTime
-    this.lastTime = time
-    this._requestId = requestAnimationFrame(this._tick)
+  protected _onTick = (time: number) => {
+    this.elapsed = time - this.currentTime
+    this.currentTime = time
+    this._requestId = requestAnimationFrame(this._onTick)
     this.emit('update', time)
   }
 
   start() {
-    this.lastTime = performance.now()
-    this._requestId = requestAnimationFrame(this._tick)
+    this.currentTime = performance.now()
+    this._requestId = requestAnimationFrame(this._onTick)
   }
 
   stop() {

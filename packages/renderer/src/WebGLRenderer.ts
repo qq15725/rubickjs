@@ -597,17 +597,10 @@ export class WebGLRenderer extends Renderer {
     if (source !== undefined) {
       if (source === null) {
         this.gl.texImage2D(glTarget, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null)
-        metadata.width = 1
-        metadata.height = 1
       } else if ('pixels' in source) {
         this.gl.texImage2D(glTarget, 0, this.gl.RGBA, source.width, source.height, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, source.pixels)
-        metadata.width = source.width
-        metadata.height = source.height
       } else {
         this.gl.texImage2D(glTarget, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, source)
-        const any = source as any
-        metadata.width = Number(any.naturalWidth || any.videoWidth || any.width || 0)
-        metadata.height = Number(any.naturalHeight || any.videoHeight || any.height || 0)
       }
     }
 
@@ -1162,10 +1155,10 @@ export class WebGLRenderer extends Renderer {
   updateViewport(x: number, y: number, width: number, height: number): void {
     const viewport = this.viewport
 
-    x = Math.round(x)
-    y = Math.round(y)
-    width = Math.round(width)
-    height = Math.round(height)
+    x = Math.floor(x)
+    y = Math.floor(y)
+    width = Math.floor(width)
+    height = Math.floor(height)
 
     if (
       viewport.x === x

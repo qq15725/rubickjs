@@ -8,9 +8,9 @@ interface EventListenerObject {
 }
 
 export class EventEmitter {
-  protected readonly _eventListeners = new Map<string, EventListenerObject | EventListenerObject[]>()
+  protected _eventListeners = new Map<string, EventListenerObject | EventListenerObject[]>()
 
-  addEventListener(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): void {
+  addEventListener(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): this {
     const object = { value: listener, options }
     const listeners = this._eventListeners.get(event)
     if (!listeners) {
@@ -20,18 +20,19 @@ export class EventEmitter {
     } else {
       this._eventListeners.set(event, [listeners, object])
     }
+    return this
   }
 
-  removeEventListener(event: string, listener?: EventListener, options?: boolean | AddEventListenerOptions): void {
+  removeEventListener(event: string, listener?: EventListener, options?: boolean | AddEventListenerOptions): this {
     if (!listener) {
       this._eventListeners.delete(event)
-      return
+      return this
     }
 
     const listeners = this._eventListeners.get(event)
 
     if (!listeners) {
-      return
+      return this
     }
 
     if (Array.isArray(listeners)) {
@@ -64,6 +65,12 @@ export class EventEmitter {
         this._eventListeners.delete(event)
       }
     }
+    return this
+  }
+
+  removeAllListeners(): this {
+    this._eventListeners.clear()
+    return this
   }
 
   hasEventListener(event: string): boolean {
@@ -94,11 +101,15 @@ export class EventEmitter {
     }
   }
 
-  on(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): void {
+  on(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): this {
     return this.addEventListener(event, listener, options)
   }
 
-  off(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): void {
+  once(event: string, listener: EventListener): this {
+    return this.addEventListener(event, listener, { once: true })
+  }
+
+  off(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): this {
     return this.removeEventListener(event, listener, options)
   }
 

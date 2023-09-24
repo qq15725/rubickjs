@@ -1,22 +1,22 @@
-import { Resource } from './Resource'
+import { BaseObject } from './BaseObject'
 import type { Node } from './Node'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 
-export class RenderQueue<T extends Node = Node> extends Resource {
+export class RenderQueue<T extends Node = Node> extends BaseObject {
   protected _renderables: Array<T> = []
 
-  push(renderable: T, index?: number, emitEnd = true) {
-    this.emit('pushStart', renderable, this)
-    if (index === undefined) {
-      this._renderables.push(renderable)
-    } else {
-      this._renderables.splice(index, 0, renderable)
-    }
-    emitEnd && this.pushEnd(renderable)
+  emitPushing(renderable: T) {
+    this.emit('pushing', renderable)
   }
 
-  pushEnd(renderable: T) {
-    this.emit('pushEnd', renderable, this)
+  emitPushed(renderable: T) {
+    this.emit('pushed', renderable)
+  }
+
+  push(renderable: T, emitPushed = true) {
+    this.emitPushing(renderable)
+    this._renderables.push(renderable)
+    emitPushed && this.emitPushed(renderable)
   }
 
   handle(renderer: WebGLRenderer) {

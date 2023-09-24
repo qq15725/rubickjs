@@ -1,58 +1,68 @@
-import { Ref } from '@rubickjs/shared'
 import { Resource } from './Resource'
 import { Ticker } from './Ticker'
 
 export abstract class MainLoop extends Resource {
   /** FPS */
-  protected _fps = new Ref(60)
-  get fps() { return this._fps.value }
-  set fps(val) { this._fps.value = val }
+  protected _fps?: number
+  get fps() { return this._fps }
+  set fps(val) {
+    const oldVal = this._fps
+    if (val !== oldVal) {
+      this._fps = val
+      this._onUpdateFps(val, oldVal)
+    }
+  }
 
   /** SPF */
-  protected _spf!: number
-  protected _nextTime = 0
+  protected _spf?: number
 
-  /** The speed with which time passes */
-  protected _speed = new Ref(1)
-  get speed() { return this._speed.value }
-  set speed(val) { this._speed.value = val }
+  /** Speed */
+  protected _speed = 1
+  get speed() { return this._speed }
+  set speed(val) {
+    const oldVal = this._speed
+    if (val !== oldVal) {
+      this._speed = val
+      this._onUpdateSpeed(val, oldVal)
+    }
+  }
 
-  protected _process?: (delta: number) => void
-
+  /** Starting */
   protected _starting = false
   get starting() { return this._starting }
 
-  constructor() {
-    super()
+  /** Process */
+  processDeltaTime = 0
+  protected _nextProcessDeltaTime = 0
+  protected _process?: (delta: number) => void
 
-    this._onUpdateFps(this._fps.value)
-    this._fps.on('update', this._onUpdateFps)
-  }
-
-  protected _onUpdateFps = (val: number) => {
-    this._spf = val ? Math.floor(1000 / val) : 0
-  }
-
-  protected _onNextTick = () => {
-    const elapsed = Ticker.instance.elapsed * this._speed.value
-    const time = this._nextTime -= elapsed
-    if (time <= 0) {
-      this._process?.((this._nextTime = this._spf) || elapsed)
-    }
+  protected _onUpdateSpeed(_val: number, _oldVal: number): void { /** override */ }
+  protected _onUpdateFps(val: number | undefined, _oldVal: number | undefined): void {
+    this._spf = val ? Math.floor(1000 / val) : undefined
   }
 
   startLoop(process: (delta: number) => void) {
     if (!this._starting) {
       this._starting = true
       this._process = process
-      Ticker.instance.on('update', this._onNextTick)
+      Ticker.instance.on('update', this._onTick)
     }
   }
 
   stopLoop() {
     if (this._starting) {
       this._starting = false
-      Ticker.instance.off('update', this._onNextTick)
+      Ticker.instance.off('update', this._onTick)
+    }
+  }
+
+  protected _onTick = () => {
+    const elapsed = Ticker.instance.elapsed * this._speed
+    const time = this._nextProcessDeltaTime -= elapsed
+    if (time <= 0) {
+      const delta = (this._nextProcessDeltaTime = this._spf || 0) || elapsed
+      this.processDeltaTime = delta
+      this._process?.(delta)
     }
   }
 }

@@ -3,6 +3,7 @@ export * from './materials'
 export * from './textures'
 export * from './viewports'
 
+export * from './BaseObject'
 export * from './MainLoop'
 export * from './Node'
 export * from './RenderQueue'

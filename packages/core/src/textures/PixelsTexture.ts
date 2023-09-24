@@ -1,12 +1,7 @@
 import { Texture } from './Texture'
+import type { TexturePixelsSource } from './Texture'
 
-export class PixelsTexture extends Texture {
-  /** Empty texture */
-  static EMPTY = new this(null, 1, 1)
-
-  /** White texture */
-  static WHITE = new this([255, 255, 255, 255], 1, 1)
-
+export class PixelsTexture extends Texture<TexturePixelsSource> {
   constructor(
     pixels?: ArrayLike<number> | ArrayBufferLike | ArrayBufferView | null,
     width = 1,
@@ -15,15 +10,15 @@ export class PixelsTexture extends Texture {
     const source = {
       width,
       height,
-      pixels: null as null | Uint8ClampedArray,
+      pixels: null as null | Uint8Array,
     }
 
     if (!pixels) {
       //
     } else if (ArrayBuffer.isView(pixels)) {
-      source.pixels = new Uint8ClampedArray(pixels.buffer)
+      source.pixels = new Uint8Array(pixels.buffer)
     } else {
-      source.pixels = new Uint8ClampedArray(pixels)
+      source.pixels = new Uint8Array(pixels)
     }
 
     super(source)

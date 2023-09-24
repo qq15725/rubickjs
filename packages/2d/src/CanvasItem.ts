@@ -2,8 +2,7 @@ import { clamp } from '@rubickjs/math'
 import { Color, ColorMatrix } from '@rubickjs/color'
 import { Ref } from '@rubickjs/shared'
 import { Node } from '@rubickjs/core'
-import { CanvasItemStyle } from './styles'
-import type { NodeProcessContext } from '@rubickjs/core'
+import { CanvasItemStyle } from './CanvasItemStyle'
 import type { ColorValue } from '@rubickjs/color'
 
 export class CanvasItem extends Node {
@@ -40,19 +39,18 @@ export class CanvasItem extends Node {
     this._alpha.on('update', this._onUpdateAlpha.bind(this))
   }
 
-  protected _onUpdateAlpha() {
-    this.addDirty('alpha')
-  }
-
-  isVisible(): boolean {
+  override isVisible(): boolean {
     return this.globalAlpha > 0 && super.isVisible()
   }
 
-  /**
-   * Update alpha
-   */
-  updateAlpha(): void {
-    const p = this.parentNode as CanvasItem
+  protected _onUpdateAlpha() { this.scheduleUpdateGlobalAlpha() }
+  scheduleUpdateGlobalAlpha() { this.addDirty('alpha') }
+
+  updateGlobalAlpha(): void {
+    const p = this._parent
+    if (!(p instanceof CanvasItem)) {
+      return
+    }
     const pa = p?.globalAlpha ?? 1
     const paDirtyId = p?.alphaDirtyId ?? this._parentAlphaDirtyId
     if (this.hasDirty('alpha') || this._parentAlphaDirtyId !== paDirtyId) {
@@ -62,8 +60,8 @@ export class CanvasItem extends Node {
     }
   }
 
-  protected override _process(context: NodeProcessContext): void {
-    super._process(context)
-    this.updateAlpha()
+  protected override _process(delta: number): void {
+    super._process(delta)
+    this.updateGlobalAlpha()
   }
 }

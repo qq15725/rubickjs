@@ -1,6 +1,6 @@
 import { Color } from '@rubickjs/color'
 import { WebGLRenderer } from '@rubickjs/renderer'
-import { SceneTree } from '@rubickjs/core'
+import { InternalMode, SceneTree } from '@rubickjs/core'
 import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER, createHTMLCanvas } from '@rubickjs/shared'
 import { Input } from '@rubickjs/input'
 import type { Node, Timer, Viewport } from '@rubickjs/core'
@@ -16,10 +16,10 @@ interface CanvasEventMap {
 }
 
 export interface Canvas {
-  addEventListener<K extends keyof CanvasEventMap>(type: K, listener: (this: Canvas, ev: CanvasEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void
-  removeEventListener<K extends keyof CanvasEventMap>(type: K, listener: (this: Canvas, ev: CanvasEventMap[K]) => any, options?: boolean | EventListenerOptions): void
-  on<K extends keyof CanvasEventMap>(type: K, listener: (this: Canvas, ev: CanvasEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void
-  off<K extends keyof CanvasEventMap>(type: K, listener: (this: Canvas, ev: CanvasEventMap[K]) => any, options?: boolean | EventListenerOptions): void
+  addEventListener<K extends keyof CanvasEventMap>(type: K, listener: (this: Canvas, ev: CanvasEventMap[K]) => any, options?: boolean | AddEventListenerOptions): this
+  removeEventListener<K extends keyof CanvasEventMap>(type: K, listener: (this: Canvas, ev: CanvasEventMap[K]) => any, options?: boolean | EventListenerOptions): this
+  on<K extends keyof CanvasEventMap>(type: K, listener: (this: Canvas, ev: CanvasEventMap[K]) => any, options?: boolean | AddEventListenerOptions): this
+  off<K extends keyof CanvasEventMap>(type: K, listener: (this: Canvas, ev: CanvasEventMap[K]) => any, options?: boolean | EventListenerOptions): this
 }
 
 export class Canvas extends EventEmitter {
@@ -184,20 +184,17 @@ export class Canvas extends EventEmitter {
     return this
   }
 
-  /**
-   * Adds a child node.
-   * Nodes can have any number of childNodes, but every child must have a unique name.
-   * Child nodes are automatically deleted when the parent node is deleted, so an entire scene can be removed by deleting its topmost node.
-   */
-  appendChild<T extends Node, D extends Node>(node: T, previousSibling?: D): boolean {
-    return this.root.appendChild(node, previousSibling)
+  addChild(node: Node, internal = InternalMode.DISABLED): this {
+    this.root.addChild(node, internal)
+    return this
   }
 
   /**
    * Render scene tree
    */
   render(delta = 0): void {
-    this.tree.render(this.renderer, delta)
+    if (delta !== undefined) this.tree.processDeltaTime = delta
+    this.tree.render(this.renderer)
   }
 
   /**
@@ -222,7 +219,7 @@ export class Canvas extends EventEmitter {
    * Destroy application
    */
   destroy(): void {
-    this.root.childNodes.forEach(node => {
+    this.root.getChildren(true).forEach(node => {
       this.root.removeChild(node)
     })
     this.unobserve()

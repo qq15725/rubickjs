@@ -25,8 +25,8 @@ export class ImageTexture extends Texture<HTMLImageElement> {
   useBitmap: boolean
   preserveBitmap = false
 
-  protected _load?: Promise<this>
-  protected _cachedGenBitmap?: Promise<this>
+  protected _loadSource?: Promise<this>
+  protected _loadBitmap?: Promise<this>
 
   constructor(
     source: HTMLImageElement | string,
@@ -43,7 +43,9 @@ export class ImageTexture extends Texture<HTMLImageElement> {
 
     super(source)
 
-    this.useBitmap = resovled.useBitmap
+    const src = source.src
+    const isSVG = src.includes('.svg') || src.startsWith('data:image/svg+xml')
+    this.useBitmap = resovled.useBitmap && !isSVG
     // this.alphaMode = typeof resovled.alphaMode === 'number' ? resovled.alphaMode : null
 
     if (resovled.autoLoad) {
@@ -51,44 +53,45 @@ export class ImageTexture extends Texture<HTMLImageElement> {
     }
   }
 
-  /**
-   * Returns a promise when image will be loaded and processed.
-   */
-  load(): Promise<this> {
-    if (this._load) {
-      return this._load
-    }
+  async load(): Promise<this> {
+    if (!this._loadSource) {
+      this._loadSource = new Promise(resolve => {
+        this._loadSource = undefined
 
-    this._load = new Promise((resolve, reject): void => {
-      const source = this.source
+        const source = this.source
 
-      const completed = (): void => {
-        if (this.destroyed) {
-          return
+        const onResolve = () => {
+          source.onload = null
+          source.onerror = null
         }
-        source.onload = null
-        source.onerror = null
-        this.update()
-        this._load = undefined
-        if (this.useBitmap) {
-          resolve(this.genBitmap())
-        } else {
+
+        const onLoad = () => {
+          onResolve()
+          this.updateSource()
+          if (this.useBitmap) {
+            this.genBitmap().finally(() => resolve(this))
+          } else {
+            resolve(this)
+          }
+        }
+
+        const onError = (error: string | Event) => {
+          onResolve()
+          console.warn(`Failed to load ImageTexture, src: ${ source.src }`, error)
+          this.emit('error', error)
           resolve(this)
         }
-      }
 
-      if (source.complete && source.src) {
-        completed()
-      } else {
-        source.onload = completed
-        source.onerror = (event): void => {
-          reject(event)
-          this.emit('error', event)
+        if (source.complete && source.src) {
+          onLoad()
+        } else {
+          source.onload = onLoad
+          source.onerror = onError
         }
-      }
-    })
+      })
+    }
 
-    return this._load
+    return this._loadSource
   }
 
   /**
@@ -97,32 +100,29 @@ export class ImageTexture extends Texture<HTMLImageElement> {
    * @returns - Cached promise to fill that bitmap
    */
   genBitmap(): Promise<this> {
-    if (this._cachedGenBitmap) {
-      return this._cachedGenBitmap
+    if (this._loadBitmap) {
+      return this._loadBitmap
     }
 
     if (this.bitmap || !SUPPORTS_CREATE_IMAGE_BITMAP) {
       return Promise.resolve(this)
     }
 
-    const source = this.source
-    const cors = !source.crossOrigin || source.crossOrigin === 'anonymous'
+    const src = this.source
+    const cors = !src.crossOrigin || src.crossOrigin === 'anonymous'
 
-    this._cachedGenBitmap = fetch(source.src, { mode: cors ? 'cors' : 'no-cors' })
+    this._loadBitmap = globalThis.fetch(src.src, { mode: cors ? 'cors' : 'no-cors' })
       .then(r => r.blob())
       .then(blob => {
-        return createImageBitmap(blob, 0, 0, source.width, source.height, {
+        return globalThis.createImageBitmap(blob, 0, 0, src.width, src.height, {
           // TODO
           premultiplyAlpha: 'premultiply',
         })
       })
       .then(bitmap => {
-        if (this.destroyed) {
-          return Promise.reject(new Error('ImageTexture is destroyed'))
-        }
         this.bitmap = bitmap
-        this.update()
-        this._cachedGenBitmap = undefined
+        this.updateSource()
+        this._loadBitmap = undefined
         return this
       })
       .catch(err => {
@@ -130,7 +130,7 @@ export class ImageTexture extends Texture<HTMLImageElement> {
         return this
       })
 
-    return this._cachedGenBitmap
+    return this._loadBitmap
   }
 
   protected override _getSouce() {

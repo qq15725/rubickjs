@@ -1,5 +1,5 @@
-import { Texture } from './Texture'
+import { PixelsTexture } from './PixelsTexture'
 
-export class ViewportTexture extends Texture {
+export class ViewportTexture extends PixelsTexture {
   //
 }

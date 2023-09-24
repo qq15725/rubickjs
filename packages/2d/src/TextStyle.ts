@@ -1,7 +1,7 @@
 import { Node2DStyle } from './Node2DStyle'
-import type { Label } from '../Label'
+import type { Text } from './Text'
 
-export class LabelStyle extends Node2DStyle {
+export class TextStyle extends Node2DStyle {
   get color() { return this._source.color }
   set color(val) { this._source.color = val }
   get fontSize() { return this._source.fontSize }
@@ -24,7 +24,7 @@ export class LabelStyle extends Node2DStyle {
   set direction(val) { this._source.direction = val }
 
   constructor(
-    protected _source: Label,
+    protected _source: Text,
   ) {
     super(_source)
   }
