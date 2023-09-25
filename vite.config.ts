@@ -7,6 +7,7 @@ export default defineConfig({
       { find: '@rubickjs/2d', replacement: resolve('./packages/2d/src') },
       { find: '@rubickjs/animation', replacement: resolve('./packages/animation/src') },
       { find: '@rubickjs/assets', replacement: resolve('./packages/assets/src') },
+      { find: '@rubickjs/audio', replacement: resolve('./packages/audio/src') },
       { find: '@rubickjs/color', replacement: resolve('./packages/color/src') },
       { find: '@rubickjs/core', replacement: resolve('./packages/core/src') },
       { find: '@rubickjs/effect', replacement: resolve('./packages/effect/src') },

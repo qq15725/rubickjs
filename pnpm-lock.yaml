@@ -58,34 +58,44 @@ importers:
         version: 0.34.1
 
   packages/2d:
-    dependencies:
+    devDependencies:
+      '@rubickjs/assets':
+        specifier: workspace:*
+        version: link:../assets
       '@rubickjs/core':
         specifier: workspace:*
         version: link:../core
 
   packages/animation:
-    dependencies:
+    devDependencies:
       '@rubickjs/core':
         specifier: workspace:*
         version: link:../core
-      '@rubickjs/math':
-        specifier: workspace:*
-        version: link:../math
 
   packages/assets:
-    dependencies:
+    devDependencies:
+      '@rubickjs/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/audio:
+    devDependencies:
+      '@rubickjs/2d':
+        specifier: workspace:*
+        version: link:../2d
       '@rubickjs/core':
         specifier: workspace:*
         version: link:../core
 
   packages/color:
     dependencies:
-      '@rubickjs/shared':
-        specifier: workspace:*
-        version: link:../shared
       colord:
         specifier: ^2.9.3
         version: 2.9.3
+    devDependencies:
+      '@rubickjs/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/core:
     dependencies:
@@ -106,13 +116,13 @@ importers:
         version: link:../shared
 
   packages/effect:
-    dependencies:
+    devDependencies:
       '@rubickjs/core':
         specifier: workspace:*
         version: link:../core
 
   packages/input:
-    dependencies:
+    devDependencies:
       '@rubickjs/shared':
         specifier: workspace:*
         version: link:../shared
@@ -120,7 +130,7 @@ importers:
   packages/math: {}
 
   packages/renderer:
-    dependencies:
+    devDependencies:
       '@rubickjs/shared':
         specifier: workspace:*
         version: link:../shared

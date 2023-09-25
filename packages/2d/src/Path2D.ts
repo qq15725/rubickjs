@@ -1,7 +1,6 @@
 import { Circle, Ellipse, Polygon, Rectangle, buildFillLine, buildFillShape } from '@rubickjs/math'
-import { PixelsTexture, UvGeometry, UvMaterial, Viewport } from '@rubickjs/core'
+import { Texture, UvGeometry, UvMaterial, Viewport } from '@rubickjs/core'
 import { Node2D } from './Node2D'
-import type { NodeProcessContext, Texture } from '@rubickjs/core'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { Shape } from '@rubickjs/math'
 
@@ -13,7 +12,7 @@ export class Path2D extends Node2D {
   vertices?: Float32Array
   uvs?: Float32Array
   indices?: Uint16Array
-  texture: Texture | Viewport = PixelsTexture.WHITE
+  texture: Texture | Viewport = Texture.WHITE
 
   moveTo(x: number, y: number): this {
     const len = this.points.length
@@ -120,8 +119,8 @@ export class Path2D extends Node2D {
       && this.indices !== undefined
   }
 
-  protected override _process(context: NodeProcessContext) {
-    super._process(context)
+  protected override _process(delta: number) {
+    super._process(delta)
     if (this.isVisible()) {
       if (this.isDirty) {
         this.clearDirty()

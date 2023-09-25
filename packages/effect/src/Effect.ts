@@ -1,6 +1,6 @@
 import { Node, QuadUvGeometry, Viewport } from '@rubickjs/core'
 import { EffectMaterial } from './EffectMaterial'
-import type { Material, NodeProcessContext, RenderQueue, SceneTree } from '@rubickjs/core'
+import type { Material } from '@rubickjs/core'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 
 export type EffectMode =
@@ -74,80 +74,90 @@ export class Effect extends Node {
     }
   }
 
-  protected _enterTree(tree: SceneTree) {
-    super._enterTree(tree)
-    tree.on('processStart', this._onGlobalProcessStart)
-    tree.on('processEnd', this._onGlobalProcessEnd)
-    tree.renderQueue.on('pushStart', this._onRenderQueuePushStart)
-    tree.renderQueue.on('pushEnd', this._onRenderQueuePushEnd)
+  protected _enterTree() {
+    const tree = this._tree!
+    tree.on('processFrame', this._onTreeProcessFrame)
+    tree.renderQueue.on('pushing', this._onRenderQueuePushing)
+    tree.renderQueue.on('pushed', this._onRenderQueuePushed)
   }
 
-  protected _exitTree(tree: SceneTree) {
-    super._exitTree(tree)
-    tree.off('processStart', this._onGlobalProcessStart)
-    tree.off('processEnd', this._onGlobalProcessEnd)
-    tree.renderQueue.off('pushStart', this._onRenderQueuePushStart)
-    tree.renderQueue.off('pushEnd', this._onRenderQueuePushEnd)
+  protected _exitTree() {
+    const tree = this._tree!
+    tree.off('processFrame', this._onTreeProcessFrame)
+    tree.renderQueue.off('pushing', this._onRenderQueuePushing)
+    tree.renderQueue.off('pushed', this._onRenderQueuePushed)
   }
 
-  protected _onGlobalProcessStart = () => {
+  protected _onTreeProcessFrame = () => {
     switch (this._mode) {
       case 'transition':
         this._previousSibling = this.previousSibling
         this._nextSibling = this.nextSibling
         break
+      default:
+        this._previousSibling = undefined
+        this._nextSibling = undefined
+        break
     }
   }
 
-  protected _onGlobalProcessEnd = () => {
-    this._previousSibling = undefined
-    this._nextSibling = undefined
-  }
-
-  protected _onRenderQueuePushStart = (renderable: Node, renderQueue: RenderQueue) => {
+  protected _onRenderQueuePushing = (renderable: Node) => {
     if (!this.needsRender()) return
+
+    const renderQueue = this._tree?.renderQueue
+    if (!renderQueue) return
 
     switch (this._mode) {
       case 'parent':
-        if (renderable === this._parentNode) {
-          renderQueue.push(this)
+        if (renderable === this._parent) {
+          renderQueue.push(this, false)
         }
         break
     }
   }
 
-  protected _onRenderQueuePushEnd = (renderable: Node, renderQueue: RenderQueue) => {
+  protected _onRenderQueuePushed = (renderable: Node) => {
     if (!this.needsRender()) return
+
+    const renderQueue = this._tree?.renderQueue
+    if (!renderQueue) return
 
     switch (this._mode) {
       case 'parent':
-        if (renderable === this._parentNode) {
-          renderQueue.push(this)
+        if (renderable === this._parent) {
+          renderQueue.push(this, false)
         }
         break
       case 'transition':
         if (renderable === this._previousSibling) {
           this._previousSibling = undefined
-          renderQueue.push(this)
+          renderQueue.push(this, false)
         } else if (renderable === this._nextSibling) {
           this._nextSibling = undefined
-          renderQueue.push(this)
+          renderQueue.push(this, false)
         }
         break
     }
   }
 
-  override process(context: NodeProcessContext): void {
-    this._renderCallId = 0
-    switch (this._mode) {
-      case 'before':
-        super.process(context)
-        break
-      case 'children':
-        if (this.childNodes.length) {
-          super.process(context)
-          context.renderQueue.push(this)
+  override notification(what: string) {
+    switch (what) {
+      case 'process':
+        this._renderCallId = 0
+        switch (this._mode) {
+          case 'before':
+            super.notification(what)
+            break
+          case 'children':
+            if (this._children.length) {
+              super.notification(what)
+              this._tree?.renderQueue.push(this, false)
+            }
+            break
         }
+        break
+      default:
+        super.notification(what)
         break
     }
   }

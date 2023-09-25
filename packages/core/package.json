@@ -40,14 +40,14 @@
   "unpkg": "dist/index.umd.min.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@rubickjs/color": "workspace:*",
     "@rubickjs/input": "workspace:*",
     "@rubickjs/math": "workspace:*",
     "@rubickjs/renderer": "workspace:*",
     "@rubickjs/shared": "workspace:*"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

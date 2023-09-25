@@ -61,7 +61,7 @@ export class Geometry extends Resource {
   protected glVertexArrayObject(renderer: WebGLRenderer, material: Material): WebGLVertexArrayObject | null {
     let flag = this.materials.get(material)
     if (!flag) {
-      this.materials.set(material, flag = { material: material.id, geometry: this.id })
+      this.materials.set(material, flag = { material: material.getInstanceId(), geometry: this.getInstanceId() })
     }
     return renderer.getRelated(flag, () => {
       return renderer.createVertexArray(
@@ -81,7 +81,7 @@ export class Geometry extends Resource {
       this.deleteDirty('buffers')
       let buffer: AttributeBuffer | undefined
       this.attributes.forEach(attribute => {
-        if (buffer?.id !== attribute.buffer.id) {
+        if (buffer?.getInstanceId() !== attribute.buffer.getInstanceId()) {
           buffer = attribute.buffer
           buffer.upload(renderer)
         }

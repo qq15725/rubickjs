@@ -43,8 +43,10 @@
   "publishConfig": {
     "access": "public"
   },
+  "devDependencies": {
+    "@rubickjs/core": "workspace:*"
+  },
   "peerDependencies": {
-    "@rubickjs/core": "workspace:*",
-    "@rubickjs/math": "workspace:*"
+    "@rubickjs/core": "workspace:*"
   }
 }

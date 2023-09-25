@@ -40,10 +40,13 @@
   "unpkg": "dist/index.umd.min.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
-  "dependencies": {
-    "@rubickjs/shared": "workspace:*"
-  },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@rubickjs/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "@rubickjs/shared": "workspace:*"
   }
 }
