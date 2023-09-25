@@ -172,7 +172,7 @@ export class WebSound extends EventEmitter implements ISound {
     }
   }
 
-  refresh(): void {
+  refresh = (): void => {
     if (!this._audio || !this._sourceNode) {
       return
     }
@@ -213,7 +213,7 @@ export class WebSound extends EventEmitter implements ISound {
     }
   }
 
-  refreshPaused(): void {
+  refreshPaused = (): void => {
     if (!this._audio) return
 
     const paused = this._paused

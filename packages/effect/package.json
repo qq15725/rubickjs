@@ -44,9 +44,11 @@
     "access": "public"
   },
   "devDependencies": {
-    "@rubickjs/core": "workspace:*"
+    "@rubickjs/core": "workspace:*",
+    "@rubickjs/renderer": "workspace:*"
   },
   "peerDependencies": {
-    "@rubickjs/core": "workspace:*"
+    "@rubickjs/core": "workspace:*",
+    "@rubickjs/renderer": "workspace:*"
   }
 }

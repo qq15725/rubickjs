@@ -1,10 +1,10 @@
 import { EventEmitter } from './EventEmitter'
 
 export interface Ref<T> {
-  addEventListener(type: 'update', listener: (this: Ref<T>, value: T, oldValue: T | undefined) => any, options?: boolean | AddEventListenerOptions): void
-  removeEventListener(type: 'update', listener: (this: Ref<T>, value: T, oldValue: T | undefined) => any, options?: boolean | EventListenerOptions): void
-  on(type: 'update', listener: (this: Ref<T>, value: T, oldValue: T | undefined) => any, options?: boolean | AddEventListenerOptions): void
-  off(type: 'update', listener: (this: Ref<T>, value: T, oldValue: T | undefined) => any, options?: boolean | EventListenerOptions): void
+  addEventListener(type: 'update', listener: (this: Ref<T>, value: T, oldValue: T | undefined) => any, options?: boolean | AddEventListenerOptions): this
+  removeEventListener(type: 'update', listener: (this: Ref<T>, value: T, oldValue: T | undefined) => any, options?: boolean | EventListenerOptions): this
+  on(type: 'update', listener: (this: Ref<T>, value: T, oldValue: T | undefined) => any, options?: boolean | AddEventListenerOptions): this
+  off(type: 'update', listener: (this: Ref<T>, value: T, oldValue: T | undefined) => any, options?: boolean | EventListenerOptions): this
 }
 
 export class Ref<T> extends EventEmitter {

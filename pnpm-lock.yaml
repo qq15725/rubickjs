@@ -71,6 +71,9 @@ importers:
       '@rubickjs/core':
         specifier: workspace:*
         version: link:../core
+      '@rubickjs/math':
+        specifier: workspace:*
+        version: link:../math
 
   packages/assets:
     devDependencies:
@@ -93,6 +96,9 @@ importers:
         specifier: ^2.9.3
         version: 2.9.3
     devDependencies:
+      '@rubickjs/math':
+        specifier: workspace:*
+        version: link:../math
       '@rubickjs/shared':
         specifier: workspace:*
         version: link:../shared
@@ -120,6 +126,9 @@ importers:
       '@rubickjs/core':
         specifier: workspace:*
         version: link:../core
+      '@rubickjs/renderer':
+        specifier: workspace:*
+        version: link:../renderer
 
   packages/input:
     devDependencies:
