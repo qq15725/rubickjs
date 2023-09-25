@@ -7,6 +7,7 @@ import type { ColorValue } from '@rubickjs/color'
 export type FontWeight = 'normal' | 'bold' | 'lighter' | 'bolder' | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
 export type FontStyle = 'normal' | 'italic' | 'oblique' | `oblique ${ string }`
 export type FontKerning = 'auto' | 'none' | 'normal'
+export type TextWrap = 'wrap' | 'nowrap'
 export type TextAlign = 'center' | 'end' | 'left' | 'right' | 'start'
 export type TextBaseline = 'alphabetic' | 'bottom' | 'hanging' | 'ideographic' | 'middle' | 'top'
 export type TextDecoration = 'underline' | 'line-through'
@@ -24,80 +25,78 @@ export interface TextChar {
 }
 
 export class Text extends Sprite<Texture<HTMLCanvasElement>> {
-  protected _paragraphs: Array<TextParagraph> = []
-  get paragraphs() { return this._paragraphs }
-
   /** Pixel ratio */
   protected readonly _pixelRatio = 2
   get pixelRatio() { return this._pixelRatio }
-  set pixelRatio(val) { this._updateProp('_pixelRatio', val) }
+  set pixelRatio(val) { this._updateProp('_pixelRatio', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _color: ColorValue = '#000000'
   get color() { return this._color }
-  set color(val) { this._updateProp('_color', val) }
+  set color(val) { this._updateProp('_color', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _fontSize = 14
   get fontSize() { return this._fontSize }
-  set fontSize(val) { this._updateProp('_fontSize', val) }
+  set fontSize(val) { this._updateProp('_fontSize', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _fontWeight: FontWeight = 'normal'
   get fontWeight() { return this._fontWeight }
-  set fontWeight(val) { this._updateProp('_fontWeight', val) }
+  set fontWeight(val) { this._updateProp('_fontWeight', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _fontFamily = 'monospace'
   get fontFamily() { return this._fontFamily }
-  set fontFamily(val) { this._updateProp('_fontFamily', val) }
+  set fontFamily(val) { this._updateProp('_fontFamily', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _fontStyle: FontStyle = 'normal'
   get fontStyle() { return this._fontStyle }
-  set fontStyle(val) { this._updateProp('_fontStyle', val) }
+  set fontStyle(val) { this._updateProp('_fontStyle', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _fontKerning: FontKerning = 'normal'
   get fontKerning() { return this._fontKerning }
-  set fontKerning(val) { this._updateProp('_fontKerning', val) }
+  set fontKerning(val) { this._updateProp('_fontKerning', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _text = ''
   get text() { return this._text }
-  set text(val) { this._updateProp('_text', String(val)) }
+  set text(val) { this._updateProp('_text', String(val), { on: 'scheduleUpdateTexture' }) }
+
+  protected _textWrap: TextWrap = 'wrap'
+  get textWrap() { return this._textWrap }
+  set textWrap(val) { this._updateProp('_textWrap', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _textAlign: TextAlign = 'center'
   get textAlign() { return this._textAlign }
-  set textAlign(val) { this._updateProp('_textAlign', val) }
+  set textAlign(val) { this._updateProp('_textAlign', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _textBaseline: TextBaseline = 'middle'
   get textBaseline() { return this._textBaseline }
-  set textBaseline(val) { this._updateProp('_textBaseline', val) }
+  set textBaseline(val) { this._updateProp('_textBaseline', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _textDecoration: TextDecoration | undefined = undefined
   get textDecoration() { return this._textDecoration }
-  set textDecoration(val) { this._updateProp('_textDecoration', val) }
+  set textDecoration(val) { this._updateProp('_textDecoration', val, { on: 'scheduleUpdateTexture' }) }
 
   protected _direction: 'inherit' | 'ltr' | 'rtl' = 'inherit'
   get direction() { return this._direction }
-  set direction(val) { this._updateProp('_direction', val) }
+  set direction(val) { this._updateProp('_direction', val, { on: 'scheduleUpdateTexture' }) }
 
-  /**
-   * Style
-   */
+  /** Style */
   protected override _style = new TextStyle(this)
+  get style(): TextStyle { return this._style }
+  set style(val: Partial<TextStyle>) { this._style.update(val) }
 
   constructor(
     text: string,
-    style?: Record<string, any>,
+    style?: Partial<TextStyle>,
   ) {
+    const canvas = document.createElement('canvas')
+    canvas.width = 0
+    canvas.height = 0
     super(
       IN_BROWSER
-        ? new Texture(document.createElement('canvas'))
+        ? new Texture(canvas)
         : undefined,
     )
-
     this.text = text
-    style && (this.style = style as any)
-  }
-
-  protected override _onUpdateProp(name: string, val: any, oldVal: any) {
-    super._onUpdateProp(name, val, oldVal)
-    this.scheduleUpdateTexture()
+    if (style) this.style = style
   }
 
   protected override _onUpdateSize() {
@@ -107,10 +106,16 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
 
   scheduleUpdateTexture() { this.addDirty('texture') }
 
-  updateParagraphs(context: CanvasRenderingContext2D) {
-    const width = this.width
-    const fontSize = this.fontSize
-    const charHeight = fontSize * 1.2
+  measure(width = 0) {
+    const context = this._texture.source.getContext('2d')
+    if (!context) {
+      throw new Error('Failed to measureText')
+    }
+    context.textBaseline = this._textBaseline
+    context.textAlign = this._textAlign
+    context.font = `${ this._fontStyle } ${ this._fontWeight } ${ this._fontSize }px ${ this._fontFamily }`
+
+    const charHeight = this._fontSize * 1.2
     const paragraphs: Array<TextParagraph> = []
     let chars: Array<TextChar> = []
     let offsetX = 0
@@ -132,8 +137,8 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
 
     this.text.split(/[\r\n]+/).forEach(text => {
       for (const char of text) {
-        const charWidth = context.measureText(char).width || fontSize
-        if (offsetX + charWidth > width) {
+        const charWidth = context.measureText(char).width || this._fontSize
+        if (this._textWrap === 'wrap' && width && offsetX + charWidth > width) {
           addParagraph()
         }
         chars.push({
@@ -152,7 +157,14 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
       addParagraph()
     }
 
-    this._paragraphs = paragraphs
+    return {
+      paragraphs,
+      ...paragraphs.reduce((size, paragraph) => {
+        size.width = Math.max(size.width, paragraph.width)
+        size.height += paragraph.height
+        return size
+      }, { width: 0, height: 0 }),
+    }
   }
 
   updateTexture() {
@@ -167,39 +179,26 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
       return
     }
 
-    const [width, height] = this.size
-    const pixelRatio = this.pixelRatio
-    const fontSize = this.fontSize
-    const font = `${ this.fontStyle } ${ this.fontWeight } ${ fontSize }px ${ this.fontFamily }`
-
-    context.textBaseline = this.textBaseline
-    context.textAlign = this.textAlign
-    context.font = font
-
-    this.updateParagraphs(context)
-
-    const paragraphs = this._paragraphs
-
-    const [, textHeight] = paragraphs
-      .reduce((size, paragraph) => {
-        size[0] = Math.max(size[0], paragraph.width)
-        size[1] += paragraph.height
-        return size
-      }, [0, 0])
+    let [width, height] = this.size
+    const { paragraphs, width: textWidth, height: textHeight } = this.measure(width)
+    if (!width) width = textWidth
+    if (!height) height = textHeight
 
     canvas.style.width = `${ width }px`
     canvas.style.height = `${ height }px`
-    canvas.width = Math.max(1, Math.floor(width * pixelRatio))
-    canvas.height = Math.max(1, Math.floor(height * pixelRatio))
-    context.strokeStyle = context.fillStyle = this.color as string
+    canvas.dataset.width = String(width)
+    canvas.dataset.height = String(height)
+    canvas.width = Math.max(1, Math.floor(width * this._pixelRatio))
+    canvas.height = Math.max(1, Math.floor(height * this._pixelRatio))
+    context.strokeStyle = context.fillStyle = this._color as string
     context.lineWidth = 2
-    context.direction = this.direction
-    context.textAlign = this.textAlign
-    context.textBaseline = this.textBaseline
-    context.font = font
-    context.fontKerning = this.fontKerning
+    context.direction = this._direction
+    context.textAlign = this._textAlign
+    context.textBaseline = this._textBaseline
+    context.font = `${ this._fontStyle } ${ this._fontWeight } ${ this._fontSize }px ${ this._fontFamily }`
+    context.fontKerning = this._fontKerning
 
-    context.scale(pixelRatio, pixelRatio)
+    context.scale(this._pixelRatio, this._pixelRatio)
     context.clearRect(0, 0, canvas.width, canvas.height)
 
     let y = 0
@@ -262,6 +261,7 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
     })
 
     this._texture.updateSource()
+    this.size.update(width, height)
   }
 
   protected override _process(delta: number) {

@@ -14,7 +14,7 @@ export class Sprite<T extends Texture = Texture> extends Node2D {
 
   protected _texture!: T
   get texture() { return this._texture }
-  set texture(val) { this._updateProp('_texture', val) }
+  set texture(val) { this._updateProp('_texture', val, { on: '_onUpdateTexture' }) }
 
   /** Batch draw */
   protected _vertices?: Float32Array
@@ -88,7 +88,7 @@ export class Sprite<T extends Texture = Texture> extends Node2D {
     this._vertices = vertices
   }
 
-  protected _onUpdatePropTexture(texture: Texture, _oldTexture: Texture) {
+  protected _onUpdateTexture(texture: Texture, _oldTexture: Texture) {
     this.size.copy(texture.size)
     this.scheduleUpdateScale()
     this.scheduleUpdateVertices()

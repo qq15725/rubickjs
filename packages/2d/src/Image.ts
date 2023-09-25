@@ -1,16 +1,21 @@
 import { Assets } from '@rubickjs/assets'
 import { ImageTexture } from '@rubickjs/core'
 import { Sprite } from './Sprite'
+import type { Node2DStyle } from './Node2DStyle'
 
 export class Image extends Sprite<ImageTexture> {
   protected _srcLoad?: Promise<this>
   protected _src!: string
   get src() { return this._src }
-  set src(val) { this._updateProp('_src', val, '_onUpdateSrc') }
+  set src(val) { this._updateProp('_src', val, { on: '_onUpdateSrc' }) }
 
-  constructor(src = '') {
+  constructor(
+    src = '',
+    style?: Partial<Node2DStyle>,
+  ) {
     super()
     this.src = src
+    if (style) this.style = style
   }
 
   protected _onUpdateSrc() {

@@ -49,11 +49,11 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
 
   protected _autoUpdate = true
   get autoUpdate() { return this._autoUpdate }
-  set autoUpdate(val) { this._updateProp('_autoUpdate', val, '_onUpdateAutoUpdate') }
+  set autoUpdate(val) { this._updateProp('_autoUpdate', val, { on: '_onUpdateAutoUpdate' }) }
 
   protected _fps = 0
   get fps() { return this._fps }
-  set fps(val) { this._updateProp('_fps', val, '_onUpdateFps') }
+  set fps(val) { this._updateProp('_fps', val, { on: '_onUpdateFps' }) }
   protected _spf = this._fps ? Math.floor(1000 / this._fps) : 0
 
   protected _autoPlay = false

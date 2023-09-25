@@ -10,9 +10,7 @@ export class CanvasItemStyle {
   get backgroundColor() { return this._source.backgroundColor }
   set backgroundColor(val) { this._source.backgroundColor = val }
 
-  /**
-   * Filter
-   */
+  /** Filter */
   protected _filter?: string
   get filter() { return this._filter }
   set filter(val) {
@@ -58,7 +56,7 @@ export class CanvasItemStyle {
     //
   }
 
-  update(style: Partial<CanvasItemStyle>) {
+  update(style: Record<string, any>) {
     for (const key in style) {
       if (key in this) {
         (this as any)[key] = (style as any)[key]

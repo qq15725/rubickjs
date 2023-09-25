@@ -14,6 +14,8 @@ export class TextStyle extends Node2DStyle {
   set fontStyle(val) { this._source.fontStyle = val }
   get fontKerning() { return this._source.fontKerning }
   set fontKerning(val) { this._source.fontKerning = val }
+  get textWrap() { return this._source.textWrap }
+  set textWrap(val) { this._source.textWrap = val }
   get textAlign() { return this._source.textAlign }
   set textAlign(val) { this._source.textAlign = val }
   get textBaseline() { return this._source.textBaseline }

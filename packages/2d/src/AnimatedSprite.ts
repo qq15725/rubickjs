@@ -7,10 +7,8 @@ export interface AnimatedSpriteFrame {
   texture: Texture
 }
 
-export type AnimatedSpriteFrames = Array<AnimatedSpriteFrame>
-
 export class AnimatedSprite extends Sprite {
-  protected _frames: AnimatedSpriteFrames = []
+  protected _frames: Array<AnimatedSpriteFrame> = []
   get frames() { return this._frames }
   set frames(val) {
     if (this._frames !== val) {

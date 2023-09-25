@@ -13,7 +13,7 @@ export class CanvasItem extends Node {
   /** Alpha */
   protected _alpha = 1
   get alpha(): number { return this._alpha }
-  set alpha(val) { this._updateProp('_alpha', clamp(0, val, 1)) }
+  set alpha(val) { this._updateProp('_alpha', clamp(0, val, 1), { dirty: 'alpha' }) }
   protected _parentAlphaDirtyId?: number
 
   /** Global alpha */
@@ -29,8 +29,15 @@ export class CanvasItem extends Node {
 
   /** Style */
   protected _style = new CanvasItemStyle(this)
-  get style() { return this._style }
-  set style(val) { this._style.update(val) }
+  get style(): CanvasItemStyle { return this._style }
+  set style(val: Partial<CanvasItemStyle>) { this._style.update(val) }
+
+  constructor(
+    style?: Partial<CanvasItemStyle>,
+  ) {
+    super()
+    if (style) this.style = style
+  }
 
   override isVisible(): boolean {
     return this.globalAlpha > 0 && super.isVisible()

@@ -33,18 +33,19 @@ export class BaseObject extends EventEmitter {
   clearMeta() { this._meta.clear() }
 
   /** Prop */
-  protected _updateProp<T>(key: string, val: T, onUpdate?: string) {
+  protected _updateProp<T>(
+    key: string, val: T,
+    options?: {
+      on?: string
+      dirty?: string
+    },
+  ) {
     const anyThis = this as any
     const oldVal = anyThis[key] as T
     if (val !== oldVal) {
       anyThis[key] = val
-      const name = key[0] === '_' ? key.substring(1) : key
-      this.addDirty(name)
-      onUpdate = onUpdate ?? `_onUpdateProp${ name.replace(/^\S/, s => s.toUpperCase()) }`
-      anyThis[onUpdate]?.(val)
-      this._onUpdateProp(key, val, oldVal)
+      if (options?.dirty) this.addDirty(options.dirty)
+      if (options?.on) anyThis[options.on]?.(val)
     }
   }
-
-  protected _onUpdateProp(_name: string, _val: any, _oldVal: any) { /** override */ }
 }

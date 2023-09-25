@@ -10,26 +10,33 @@ document.body.append(view)
 
 // text
 const text = new Text('Hello, World!', {
+  left: 100,
+  top: 100,
+  width: 100,
+  height: 200,
   fontSize: 22,
+  textWrap: 'wrap',
   color: 'red',
+  backgroundColor: '#0000FF',
   textDecoration: 'underline',
 })
-text.width = 200
-text.height = 100
-text.x = 100
-text.y = 100
 canvas.addChild(text)
 
 // sprite
-const bunny = new Image('https://pixijs.com/assets/bunny.png')
+const bunny = new Image('https://pixijs.com/assets/bunny.png', {
+  backgroundColor: '#0000FF',
+})
 canvas.addChild(bunny)
 
 // group
-const group = new Node2D()
-group.x = 400
-group.y = 100
+const group = new Node2D({
+  left: 200,
+  top: 100,
+})
 for (let i = 0; i < 5; i++) {
-  const item = new Image('https://pixijs.com/assets/bunny.png')
+  const item = new Image('https://pixijs.com/assets/bunny.png', {
+    backgroundColor: '#00FF0011',
+  })
   item.x = i * 10
   group.addChild(item)
 }
@@ -48,7 +55,7 @@ const effect = new Effect({
 group.addChild(
   new Animation({
     startTime: 5000,
-    duration: 10000,
+    duration: 3000,
     keyframes: [
       { left: 300, top: 100, offset: 0, easing: 'easeIn' },
       { left: 400, top: 120, offset: 0.5, easing: 'easeOut' },
@@ -62,7 +69,6 @@ group.addChild(
 canvas.addChild(group)
 
 canvas.timeline.on('update', (_, delta) => {
-  text.rotation += 0.005 * delta
   bunny.x = canvas.width / 2 - bunny.width / 2
   bunny.y = canvas.height / 2 - bunny.height / 2
   bunny.rotation += 0.001 * delta

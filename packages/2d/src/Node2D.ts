@@ -44,11 +44,16 @@ export class Node2D extends CanvasItem {
 
   /** Style */
   protected override _style = new Node2DStyle(this)
+  get style(): Node2DStyle { return this._style }
+  set style(val: Partial<Node2DStyle>) { this._style.update(val) }
 
-  constructor() {
+  constructor(
+    style?: Partial<Node2DStyle>,
+  ) {
     super()
     this.size.onUpdate(this._onUpdateSize.bind(this))
     this.transformOrigin.onUpdate(this._onUpdateTransformOrigin.bind(this))
+    if (style) this.style = style
   }
 
   protected _onUpdateSize(): void { /** override */ }
