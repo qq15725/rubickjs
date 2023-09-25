@@ -56,7 +56,19 @@ export class CanvasItemStyle {
     //
   }
 
-  update(style: Record<string, any>) {
+  toObject() {
+    return {
+      visibility: this.visibility,
+      opacity: this.opacity,
+      backgroundColor: this.backgroundColor,
+      filter: this.filter,
+    }
+  }
+
+  update(style: Record<string, any> | CanvasItemStyle) {
+    if ('toObject' in style) {
+      style = style.toObject()
+    }
     for (const key in style) {
       if (key in this) {
         (this as any)[key] = (style as any)[key]

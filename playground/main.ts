@@ -54,7 +54,6 @@ const effect = new Effect({
 
 group.addChild(
   new Animation({
-    startTime: 5000,
     duration: 3000,
     keyframes: [
       { left: 300, top: 100, offset: 0, easing: 'easeIn' },
@@ -62,7 +61,7 @@ group.addChild(
       { left: 350, top: 120, offset: 0.8, easing: 'easeOut' },
       { left: 300, top: 100, offset: 1 },
     ],
-    loop: true,
+    // loop: true,
   }),
 )
 

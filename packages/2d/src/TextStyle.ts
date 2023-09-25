@@ -30,4 +30,21 @@ export class TextStyle extends Node2DStyle {
   ) {
     super(_source)
   }
+
+  toObject() {
+    return {
+      ...super.toObject(),
+      color: this.color,
+      fontSize: this.fontSize,
+      fontWeight: this.fontWeight,
+      fontFamily: this.fontFamily,
+      fontStyle: this.fontStyle,
+      fontKerning: this.fontKerning,
+      textWrap: this.textWrap,
+      textAlign: this.textAlign,
+      textBaseline: this.textBaseline,
+      textDecoration: this.textDecoration,
+      direction: this.direction,
+    }
+  }
 }

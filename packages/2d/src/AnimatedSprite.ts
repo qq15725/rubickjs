@@ -10,12 +10,7 @@ export interface AnimatedSpriteFrame {
 export class AnimatedSprite extends Sprite {
   protected _frames: Array<AnimatedSpriteFrame> = []
   get frames() { return this._frames }
-  set frames(val) {
-    if (this._frames !== val) {
-      this._frames = val
-      this._onUpdateFrames()
-    }
-  }
+  set frames(val) { this._updateProp('_frames', val, { on: '_onUpdateFrames' }) }
 
   protected _duration = 0
   get duration() { return this._duration }

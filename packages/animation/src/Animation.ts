@@ -23,51 +23,60 @@ export interface AnimationOptions {
 }
 
 export class Animation extends Node {
+  startTime!: number
+  duration!: number
   loop!: boolean
   keyframes!: Array<Keyframe>
 
+  protected _startStyle?: Record<string, any>
+
   constructor(options: AnimationOptions) {
     super()
-    this.visibleStartTime = options.startTime ?? 0
-    this.visibleDuration = options.duration ?? 2000
+    this.startTime = options.startTime ?? 0
+    this.duration = options.duration ?? 2000
     this.loop = options.loop ?? false
     this.keyframes = options.keyframes
   }
 
-  protected override _enterTree() {
-    this._tree?.timeline.on('update', this._onUpdateTime)
-  }
+  protected _process(delta: number) {
+    super._process(delta)
 
-  protected override _exitTree() {
-    this._tree?.timeline.off('update', this._onUpdateTime)
-  }
-
-  protected _onUpdateTime = (currentTime: number) => {
-    currentTime = (currentTime - this.visibleStartTime) / this.visibleDuration
-
-    if (this.loop) {
-      currentTime = currentTime % 1
-    }
-
-    if (currentTime < 0 || currentTime > 1) {
-      return
-    }
-
-    const keyframes = this._parseKeyframes(currentTime)
-
-    if (!keyframes) {
-      return
-    }
-
-    const [previous, current] = keyframes
-
-    if (this._children.length > 0) {
-      for (let len = this._children.length, i = 0; i < len; i++) {
-        this._commitStyles(this._children[i], currentTime, previous, current)
+    let enabled = false
+    if (this.isVisible()) {
+      const parent = this.getParent()
+      if (parent && 'style' in parent) {
+        let currentTime = this._tree?.timeline.currentTime ?? 0
+        currentTime = (currentTime + this.startTime) / this.duration
+        if (this.loop) currentTime = currentTime % 1
+        if (currentTime >= 0 && currentTime <= 1) {
+          const keyframes = this._parseKeyframes(currentTime)
+          if (keyframes) {
+            if (!this._startStyle) this._startStyle = (parent.style as any).toObject()
+            const [previous, current] = keyframes
+            this._commitStyles(parent, currentTime, previous, current)
+            enabled = true
+          }
+        }
       }
-    } else if (this.getParent()) {
-      this._commitStyles(this.getParent(), currentTime, previous, current)
     }
+
+    if (!enabled && this._startStyle) {
+      const style = this._startStyle
+      this._startStyle = undefined
+      const parent = this.getParent()
+      if (!parent) return
+      (parent as any).style = style
+    }
+  }
+
+  protected _onUpdateTime(): void {
+    const parent = this.getParent()
+    if (!parent) return
+    const currentTime = this.visibleProgress
+    const keyframes = this._parseKeyframes(currentTime)
+    if (!keyframes) return
+    const [previous, current] = keyframes
+    this._commitStyles(parent, currentTime, previous, current)
   }
 
   protected _parseKeyframes(currentTime: number): [NormalizedKeyframe, NormalizedKeyframe] | null {

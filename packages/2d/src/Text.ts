@@ -167,6 +167,77 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
     }
   }
 
+  protected _fillText(
+    paragraphs: Array<TextParagraph>,
+    width: number,
+    height: number,
+    textHeight: number,
+    y = 0,
+  ) {
+    const context = this._texture.source.getContext('2d')
+    if (!context) {
+      throw new Error('Failed to measureText')
+    }
+    paragraphs.forEach(paragraph => {
+      const fillPosition = [0, 0]
+
+      switch (this._textAlign) {
+        case 'start':
+        case 'left':
+          paragraph.x = 0
+          fillPosition[0] = 0
+          break
+        case 'center':
+          paragraph.x = (width - paragraph.width) / 2
+          fillPosition[0] = width / 2
+          break
+        case 'end':
+        case 'right':
+          paragraph.x = width - paragraph.width
+          fillPosition[0] = width
+          break
+      }
+
+      switch (this._textBaseline) {
+        case 'top':
+        case 'hanging':
+          paragraph.y = y
+          fillPosition[1] = y
+          break
+        case 'middle':
+        case 'alphabetic':
+        case 'ideographic':
+          paragraph.y = y + (height - textHeight) / 2
+          fillPosition[1] = paragraph.y + paragraph.height / 2
+          break
+        case 'bottom':
+          paragraph.y = y + height - textHeight
+          fillPosition[1] = paragraph.y + paragraph.height
+          break
+      }
+
+      context.fillText(paragraph.text, fillPosition[0], fillPosition[1])
+
+      switch (this._textDecoration) {
+        case 'underline':
+          context.beginPath()
+          context.moveTo(paragraph.x, paragraph.y + paragraph.height - 2)
+          context.lineTo(paragraph.x + paragraph.width, paragraph.y + paragraph.height - 2)
+          context.stroke()
+          break
+        case 'line-through':
+          context.beginPath()
+          context.moveTo(paragraph.x, paragraph.y + paragraph.height / 2)
+          context.lineTo(paragraph.x + paragraph.width, paragraph.y + paragraph.height / 2)
+          context.stroke()
+          break
+      }
+
+      y += paragraph.height
+    })
+    return y
+  }
+
   updateTexture() {
     if (!this.hasDirty('texture')) return
     this.deleteDirty('texture')
@@ -201,64 +272,12 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
     context.scale(this._pixelRatio, this._pixelRatio)
     context.clearRect(0, 0, canvas.width, canvas.height)
 
-    let y = 0
-    paragraphs.forEach(paragraph => {
-      const fillPosition = [0, 0]
-
-      switch (context.textAlign) {
-        case 'start':
-        case 'left':
-          paragraph.x = 0
-          fillPosition[0] = 0
-          break
-        case 'center':
-          paragraph.x = (width - paragraph.width) / 2
-          fillPosition[0] = width / 2
-          break
-        case 'end':
-        case 'right':
-          paragraph.x = width - paragraph.width
-          fillPosition[0] = width
-          break
-      }
-
-      switch (context.textBaseline) {
-        case 'top':
-        case 'hanging':
-          paragraph.y = y
-          fillPosition[1] = y
-          break
-        case 'middle':
-        case 'alphabetic':
-        case 'ideographic':
-          paragraph.y = y + (height - textHeight) / 2
-          fillPosition[1] = paragraph.y + paragraph.height / 2
-          break
-        case 'bottom':
-          paragraph.y = y + height - textHeight
-          fillPosition[1] = paragraph.y + paragraph.height
-          break
-      }
-
-      context.fillText(paragraph.text, fillPosition[0], fillPosition[1])
-
-      switch (this.textDecoration) {
-        case 'underline':
-          context.beginPath()
-          context.moveTo(paragraph.x, paragraph.y + paragraph.height - 2)
-          context.lineTo(paragraph.x + paragraph.width, paragraph.y + paragraph.height - 2)
-          context.stroke()
-          break
-        case 'line-through':
-          context.beginPath()
-          context.moveTo(paragraph.x, paragraph.y + paragraph.height / 2)
-          context.lineTo(paragraph.x + paragraph.width, paragraph.y + paragraph.height / 2)
-          context.stroke()
-          break
-      }
-
-      y += paragraph.height
-    })
+    this._fillText(
+      paragraphs,
+      width,
+      height,
+      textHeight,
+    )
 
     this._texture.updateSource()
     this.size.update(width, height)

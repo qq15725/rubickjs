@@ -101,6 +101,19 @@ export class Node2DStyle extends CanvasItemStyle {
   ) {
     super(_source)
   }
+
+  toObject() {
+    return {
+      ...super.toObject(),
+      left: this.left,
+      top: this.top,
+      width: this.width,
+      height: this.height,
+      rotate: this.rotate,
+      transformOrigin: this.transformOrigin,
+      transform: this.transform,
+    }
+  }
 }
 
 function rotate2Scale(deg: number) {
