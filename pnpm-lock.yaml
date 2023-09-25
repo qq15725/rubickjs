@@ -74,6 +74,9 @@ importers:
       '@rubickjs/math':
         specifier: workspace:*
         version: link:../math
+      '@rubickjs/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/assets:
     devDependencies:
