@@ -1,5 +1,5 @@
 import { colord } from 'colord'
-import { Ref } from '@rubickjs/shared'
+import { EventEmitter } from '@rubickjs/shared'
 import { clamp } from '@rubickjs/math'
 import type {
   AnyColor,
@@ -17,37 +17,51 @@ export type ColorValue =
 
 const HEX_PATTERN = /^(#|0x)?(([a-f0-9]{3}){1,2}([a-f0-9]{2})?)$/i
 
-export class Color extends Ref<ColorValue> {
-  r!: number
-  g!: number
-  b!: number
-  a!: number
-  get r8(): number { return this.r * 255 & 0xFF }
-  get g8(): number { return this.g * 255 & 0xFF }
-  get b8(): number { return this.b * 255 & 0xFF }
-  get a8(): number { return this.a * 255 & 0xFF }
+export class Color extends EventEmitter {
+  protected _source!: ColorValue
+  get source() { return this._source }
+  set source(val) {
+    if (this._source !== val) {
+      this._source = val
+      this._normalize()
+    }
+  }
+
+  protected _r!: number
+  protected _g!: number
+  protected _b!: number
+  protected _a!: number
+  get r(): number { return this._r }
+  get g(): number { return this._g }
+  get b(): number { return this._b }
+  get a(): number { return this._a }
+  get r8(): number { return this._r * 255 & 0xFF }
+  get g8(): number { return this._g * 255 & 0xFF }
+  get b8(): number { return this._b * 255 & 0xFF }
+  get a8(): number { return this._a * 255 & 0xFF }
   get rgb(): number { return (this.r8 << 16) + (this.g8 << 8) + this.b8 }
   get bgr(): number { return (this.b8 << 16) + (this.g8 << 8) + this.r8 }
   get abgr(): number { return (this.a8 << 24) + this.bgr }
 
-  constructor(value: ColorValue = 0x00000000) {
-    super(value)
-    this._normalize(value)
-    this.on('update', this._normalize.bind(this))
+  constructor(source: ColorValue = 0x00000000) {
+    super()
+    this.source = source
   }
 
   round(steps: number): this {
-    this.r = Math.round(this.r * steps) / steps
-    this.g = Math.round(this.g * steps) / steps
-    this.b = Math.round(this.b * steps) / steps
+    this._r = Math.round(this._r * steps) / steps
+    this._g = Math.round(this._g * steps) / steps
+    this._b = Math.round(this._b * steps) / steps
     return this
   }
 
-  protected _normalize(value: ColorValue): this {
+  protected _normalize(): this {
     let r: number | undefined
     let g: number | undefined
     let b: number | undefined
     let a: number | undefined
+
+    let value = this._source
 
     if (value === 0) {
       r = g = b = a = 0
@@ -96,10 +110,10 @@ export class Color extends Ref<ColorValue> {
       throw new Error(`Unable to convert color ${ value }`)
     }
 
-    this.r = r!
-    this.g = g!
-    this.b = b!
-    this.a = a!
+    this._r = r!
+    this._g = g!
+    this._b = b!
+    this._a = a!
     return this
   }
 

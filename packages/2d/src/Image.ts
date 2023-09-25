@@ -6,16 +6,15 @@ export class Image extends Sprite<ImageTexture> {
   protected _srcLoad?: Promise<this>
   protected _src!: string
   get src() { return this._src }
-  set src(val) {
-    if (this._src !== val) {
-      this._src = val
-      this.load(true)
-    }
-  }
+  set src(val) { this._updateProp('_src', val, '_onUpdateSrc') }
 
   constructor(src = '') {
     super()
     this.src = src
+  }
+
+  protected _onUpdateSrc() {
+    this.load(true)
   }
 
   async load(force = false): Promise<this> {

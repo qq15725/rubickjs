@@ -129,7 +129,6 @@ export class AudioWaveform extends Sprite<Texture<HTMLCanvasElement>> {
     }
 
     this.texture.updateSource()
-    this._onUpdateTexture()
   }
 
   protected override _process(delta: number) {

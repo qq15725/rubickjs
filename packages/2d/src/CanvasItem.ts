@@ -1,6 +1,5 @@
 import { clamp } from '@rubickjs/math'
 import { Color, ColorMatrix } from '@rubickjs/color'
-import { Ref } from '@rubickjs/shared'
 import { Node } from '@rubickjs/core'
 import { CanvasItemStyle } from './CanvasItemStyle'
 import type { ColorValue } from '@rubickjs/color'
@@ -8,23 +7,22 @@ import type { ColorValue } from '@rubickjs/color'
 export class CanvasItem extends Node {
   /** Tint */
   protected _tint = new Color(0xFFFFFF)
-  get tint(): ColorValue { return this._tint.value }
-  set tint(val) { this._tint.value = val }
+  get tint(): ColorValue { return this._tint.source }
+  set tint(val) { this._tint.source = val }
 
   /** Alpha */
-  protected _alpha = new Ref(1)
-  get alpha(): number { return this._alpha.value }
-  set alpha(val) { this._alpha.value = clamp(0, val, 1) }
-  get alphaDirtyId() { return this._alpha.dirtyId }
-  protected _parentAlphaDirtyId = this.alphaDirtyId
+  protected _alpha = 1
+  get alpha(): number { return this._alpha }
+  set alpha(val) { this._updateProp('_alpha', clamp(0, val, 1)) }
+  protected _parentAlphaDirtyId?: number
 
   /** Global alpha */
   globalAlpha = this.alpha
 
   /** Background color */
   protected _backgroundColor = new Color(0x00000000)
-  get backgroundColor(): ColorValue { return this._backgroundColor.value }
-  set backgroundColor(val) { this._backgroundColor.value = val }
+  get backgroundColor(): ColorValue { return this._backgroundColor.source }
+  set backgroundColor(val) { this._backgroundColor.source = val }
 
   /** Color matrix */
   readonly colorMatrix = new ColorMatrix()
@@ -34,17 +32,9 @@ export class CanvasItem extends Node {
   get style() { return this._style }
   set style(val) { this._style.update(val) }
 
-  constructor() {
-    super()
-    this._alpha.on('update', this._onUpdateAlpha.bind(this))
-  }
-
   override isVisible(): boolean {
     return this.globalAlpha > 0 && super.isVisible()
   }
-
-  protected _onUpdateAlpha() { this.scheduleUpdateGlobalAlpha() }
-  scheduleUpdateGlobalAlpha() { this.addDirty('alpha') }
 
   updateGlobalAlpha(): void {
     const p = this._parent
@@ -52,11 +42,11 @@ export class CanvasItem extends Node {
       return
     }
     const pa = p?.globalAlpha ?? 1
-    const paDirtyId = p?.alphaDirtyId ?? this._parentAlphaDirtyId
+    const paDirtyId = p?.getDirtyId('alpha') ?? this._parentAlphaDirtyId
     if (this.hasDirty('alpha') || this._parentAlphaDirtyId !== paDirtyId) {
       this.deleteDirty('alpha')
       this._parentAlphaDirtyId = paDirtyId
-      this.globalAlpha = this._alpha.value * pa
+      this.globalAlpha = this._alpha * pa
     }
   }
 

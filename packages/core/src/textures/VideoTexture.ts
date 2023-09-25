@@ -1,4 +1,4 @@
-import { Ref, crossOrigin, isVideoElement } from '@rubickjs/shared'
+import { crossOrigin, isVideoElement } from '@rubickjs/shared'
 import { Ticker } from '../Ticker'
 import { Texture } from './Texture'
 
@@ -47,14 +47,14 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
   get currentTime(): number { return this.source.currentTime }
   set currentTime(val) { this.source.currentTime = val }
 
-  protected _autoUpdate = new Ref(true)
-  get autoUpdate() { return this._autoUpdate.value }
-  set autoUpdate(val) { this._autoUpdate.value = val }
+  protected _autoUpdate = true
+  get autoUpdate() { return this._autoUpdate }
+  set autoUpdate(val) { this._updateProp('_autoUpdate', val, '_onUpdateAutoUpdate') }
 
-  protected _fps = new Ref(0)
-  get fps() { return this._fps.value }
-  set fps(val) { this._fps.value = val }
-  protected _spf = this._fps.value ? Math.floor(1000 / this._fps.value) : 0
+  protected _fps = 0
+  get fps() { return this._fps }
+  set fps(val) { this._updateProp('_fps', val, '_onUpdateFps') }
+  protected _spf = this._fps ? Math.floor(1000 / this._fps) : 0
 
   protected _autoPlay = false
 
@@ -120,13 +120,15 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
     }
 
     this._setupAutoUpdate()
+  }
 
-    this._fps.on('update', val => {
-      this._spf = val ? Math.floor(1000 / val) : 0
-      this._setupAutoUpdate()
-    })
+  protected _onUpdateFps(val: number) {
+    this._spf = val ? Math.floor(1000 / val) : 0
+    this._setupAutoUpdate()
+  }
 
-    this._autoUpdate.on('update', this._setupAutoUpdate)
+  protected _onUpdateAutoUpdate() {
+    this._setupAutoUpdate()
   }
 
   protected _onPlayStart = () => {
@@ -177,7 +179,7 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
 
   /** Fired when the video is completed seeking to the current playback position. */
   protected _onSeeked = (): void => {
-    if (this._autoUpdate.value && !this.isPlaying) {
+    if (this._autoUpdate && !this.isPlaying) {
       this._nextTime = 0
       this.update()
       this._nextTime = 0
@@ -185,8 +187,8 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
   }
 
   protected _setupAutoUpdate(): void {
-    if (this._autoUpdate.value && this.isPlaying) {
-      if (!this._fps.value && this.source.requestVideoFrameCallback) {
+    if (this._autoUpdate && this.isPlaying) {
+      if (!this._fps && this.source.requestVideoFrameCallback) {
         if (this._connected) {
           Ticker.instance.off('update', this.update)
           this._connected = false

@@ -1,4 +1,4 @@
-import { IN_BROWSER, Ref } from '@rubickjs/shared'
+import { IN_BROWSER } from '@rubickjs/shared'
 import { Texture } from '@rubickjs/core'
 import { TextStyle } from './TextStyle'
 import { Sprite } from './Sprite'
@@ -28,53 +28,53 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
   get paragraphs() { return this._paragraphs }
 
   /** Pixel ratio */
-  protected readonly _pixelRatio = new Ref(2)
-  get pixelRatio() { return this._pixelRatio.value }
-  set pixelRatio(val) { this._pixelRatio.value = val }
+  protected readonly _pixelRatio = 2
+  get pixelRatio() { return this._pixelRatio }
+  set pixelRatio(val) { this._updateProp('_pixelRatio', val) }
 
-  protected _color = new Ref<ColorValue>('#000000')
-  get color() { return this._color.value }
-  set color(val) { this._color.value = val }
+  protected _color: ColorValue = '#000000'
+  get color() { return this._color }
+  set color(val) { this._updateProp('_color', val) }
 
-  protected _fontSize = new Ref(14)
-  get fontSize() { return this._fontSize.value }
-  set fontSize(val) { this._fontSize.value = val }
+  protected _fontSize = 14
+  get fontSize() { return this._fontSize }
+  set fontSize(val) { this._updateProp('_fontSize', val) }
 
-  protected _fontWeight = new Ref<FontWeight>('normal')
-  get fontWeight() { return this._fontWeight.value }
-  set fontWeight(val) { this._fontWeight.value = val }
+  protected _fontWeight: FontWeight = 'normal'
+  get fontWeight() { return this._fontWeight }
+  set fontWeight(val) { this._updateProp('_fontWeight', val) }
 
-  protected _fontFamily = new Ref('monospace')
-  get fontFamily() { return this._fontFamily.value }
-  set fontFamily(val) { this._fontFamily.value = val }
+  protected _fontFamily = 'monospace'
+  get fontFamily() { return this._fontFamily }
+  set fontFamily(val) { this._updateProp('_fontFamily', val) }
 
-  protected _fontStyle = new Ref<FontStyle>('normal')
-  get fontStyle() { return this._fontStyle.value }
-  set fontStyle(val) { this._fontStyle.value = val }
+  protected _fontStyle: FontStyle = 'normal'
+  get fontStyle() { return this._fontStyle }
+  set fontStyle(val) { this._updateProp('_fontStyle', val) }
 
-  protected _fontKerning = new Ref<FontKerning>('normal')
-  get fontKerning() { return this._fontKerning.value }
-  set fontKerning(val) { this._fontKerning.value = val }
+  protected _fontKerning: FontKerning = 'normal'
+  get fontKerning() { return this._fontKerning }
+  set fontKerning(val) { this._updateProp('_fontKerning', val) }
 
-  protected _text = new Ref('')
-  get text() { return this._text.value }
-  set text(val) { this._text.value = String(val) }
+  protected _text = ''
+  get text() { return this._text }
+  set text(val) { this._updateProp('_text', String(val)) }
 
-  protected _textAlign = new Ref<TextAlign>('center')
-  get textAlign() { return this._textAlign.value }
-  set textAlign(val) { this._textAlign.value = val }
+  protected _textAlign: TextAlign = 'center'
+  get textAlign() { return this._textAlign }
+  set textAlign(val) { this._updateProp('_textAlign', val) }
 
-  protected _textBaseline = new Ref<TextBaseline>('middle')
-  get textBaseline() { return this._textBaseline.value }
-  set textBaseline(val) { this._textBaseline.value = val }
+  protected _textBaseline: TextBaseline = 'middle'
+  get textBaseline() { return this._textBaseline }
+  set textBaseline(val) { this._updateProp('_textBaseline', val) }
 
-  protected _textDecoration = new Ref<TextDecoration | undefined>(undefined)
-  get textDecoration() { return this._textDecoration.value }
-  set textDecoration(val) { this._textDecoration.value = val }
+  protected _textDecoration: TextDecoration | undefined = undefined
+  get textDecoration() { return this._textDecoration }
+  set textDecoration(val) { this._updateProp('_textDecoration', val) }
 
-  protected _direction = new Ref<'inherit' | 'ltr' | 'rtl'>('inherit')
-  get direction() { return this._direction.value }
-  set direction(val) { this._direction.value = val }
+  protected _direction: 'inherit' | 'ltr' | 'rtl' = 'inherit'
+  get direction() { return this._direction }
+  set direction(val) { this._updateProp('_direction', val) }
 
   /**
    * Style
@@ -91,26 +91,13 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
         : undefined,
     )
 
-    const _onUpdate = this.scheduleUpdateTexture.bind(this)
-    this._pixelRatio.on('update', _onUpdate)
-    this._color.on('update', _onUpdate)
-    this._fontSize.on('update', _onUpdate)
-    this._fontWeight.on('update', _onUpdate)
-    this._fontFamily.on('update', _onUpdate)
-    this._fontStyle.on('update', _onUpdate)
-    this._fontKerning.on('update', _onUpdate)
-    this._text.on('update', _onUpdate)
-    this._textAlign.on('update', _onUpdate)
-    this._textBaseline.on('update', _onUpdate)
-    this._textDecoration.on('update', _onUpdate)
-    this._direction.on('update', _onUpdate)
-
     this.text = text
     style && (this.style = style as any)
   }
 
-  protected override _onUpdateTexture() {
-    super._onUpdateTexture(false)
+  protected override _onUpdateProp(name: string, val: any, oldVal: any) {
+    super._onUpdateProp(name, val, oldVal)
+    this.scheduleUpdateTexture()
   }
 
   protected override _onUpdateSize() {

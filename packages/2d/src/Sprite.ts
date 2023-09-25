@@ -14,12 +14,7 @@ export class Sprite<T extends Texture = Texture> extends Node2D {
 
   protected _texture!: T
   get texture() { return this._texture }
-  set texture(val) {
-    if (this._texture !== val) {
-      this._texture = val
-      this._onUpdateTexture()
-    }
-  }
+  set texture(val) { this._updateProp('_texture', val) }
 
   /** Batch draw */
   protected _vertices?: Float32Array
@@ -32,14 +27,14 @@ export class Sprite<T extends Texture = Texture> extends Node2D {
   }
 
   updateScale() {
-    if (!this.hasDirty('scale')) {
+    if (!this.hasDirty('scale') && !this._texture.hasDirty('size')) {
       return
     }
 
     this.deleteDirty('scale')
 
     const { x: width, y: height } = this.size
-    const { x: textureWidth, y: textureHeight } = this.texture.size
+    const { x: textureWidth, y: textureHeight } = this._texture.size
 
     if (width && height && textureWidth && textureHeight) {
       this.scale.update(
@@ -50,10 +45,10 @@ export class Sprite<T extends Texture = Texture> extends Node2D {
   }
 
   updateVertices(): void {
-    let { x: width, y: height } = this.texture.size
+    let { x: width, y: height } = this._texture.size
 
     if (
-      !this.hasDirty('vertices')
+      (!this.hasDirty('vertices') && !this._texture.hasDirty('size'))
       || !width
       || !height
     ) {
@@ -93,8 +88,8 @@ export class Sprite<T extends Texture = Texture> extends Node2D {
     this._vertices = vertices
   }
 
-  protected _onUpdateTexture(copySize = true) {
-    copySize && this.size.copy(this._texture.size)
+  protected _onUpdatePropTexture(texture: Texture, _oldTexture: Texture) {
+    this.size.copy(texture.size)
     this.scheduleUpdateScale()
     this.scheduleUpdateVertices()
   }
@@ -118,7 +113,7 @@ export class Sprite<T extends Texture = Texture> extends Node2D {
     if (!event.target && this.needsRender()) {
       if (event instanceof PointerInputEvent) {
         const inverse = this.globalTransform.inverse()
-        const { x: width, y: height } = this.texture.size
+        const { x: width, y: height } = this._texture.size
         const { x: originX, y: originY } = this.transformOrigin
 
         let { screenX, screenY } = event
