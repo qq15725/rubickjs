@@ -1,4 +1,4 @@
-import { IN_BROWSER } from '@rubickjs/shared'
+import { IN_BROWSER, defineProxiedProp } from '@rubickjs/shared'
 import { Texture } from '@rubickjs/core'
 import { TextStyle } from './TextStyle'
 import { Sprite } from './Sprite'
@@ -26,57 +26,57 @@ export interface TextChar {
 
 export class Text extends Sprite<Texture<HTMLCanvasElement>> {
   /** Pixel ratio */
-  protected readonly _pixelRatio = 2
-  get pixelRatio() { return this._pixelRatio }
-  set pixelRatio(val) { this._updateProp('_pixelRatio', val, { on: 'scheduleUpdateTexture' }) }
+  protected _pixelRatio = 2
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public pixelRatio!: number
 
   protected _color: ColorValue = '#000000'
-  get color() { return this._color }
-  set color(val) { this._updateProp('_color', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public color!: ColorValue
 
   protected _fontSize = 14
-  get fontSize() { return this._fontSize }
-  set fontSize(val) { this._updateProp('_fontSize', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public fontSize!: number
 
   protected _fontWeight: FontWeight = 'normal'
-  get fontWeight() { return this._fontWeight }
-  set fontWeight(val) { this._updateProp('_fontWeight', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public fontWeight!: FontWeight
 
   protected _fontFamily = 'monospace'
-  get fontFamily() { return this._fontFamily }
-  set fontFamily(val) { this._updateProp('_fontFamily', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public fontFamily!: string
 
   protected _fontStyle: FontStyle = 'normal'
-  get fontStyle() { return this._fontStyle }
-  set fontStyle(val) { this._updateProp('_fontStyle', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public fontStyle!: FontStyle
 
   protected _fontKerning: FontKerning = 'normal'
-  get fontKerning() { return this._fontKerning }
-  set fontKerning(val) { this._updateProp('_fontKerning', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public fontKerning!: FontKerning
 
   protected _text = ''
-  get text() { return this._text }
-  set text(val) { this._updateProp('_text', String(val), { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public text!: string
 
   protected _textWrap: TextWrap = 'wrap'
-  get textWrap() { return this._textWrap }
-  set textWrap(val) { this._updateProp('_textWrap', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public textWrap!: TextWrap
 
   protected _textAlign: TextAlign = 'center'
-  get textAlign() { return this._textAlign }
-  set textAlign(val) { this._updateProp('_textAlign', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public textAlign!: TextAlign
 
   protected _textBaseline: TextBaseline = 'middle'
-  get textBaseline() { return this._textBaseline }
-  set textBaseline(val) { this._updateProp('_textBaseline', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public textBaseline!: TextBaseline
 
   protected _textDecoration: TextDecoration | undefined = undefined
-  get textDecoration() { return this._textDecoration }
-  set textDecoration(val) { this._updateProp('_textDecoration', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public textDecoration!: TextDecoration | undefined
 
   protected _direction: 'inherit' | 'ltr' | 'rtl' = 'inherit'
-  get direction() { return this._direction }
-  set direction(val) { this._updateProp('_direction', val, { on: 'scheduleUpdateTexture' }) }
+  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
+  public direction!: 'inherit' | 'ltr' | 'rtl'
 
   /** Style */
   protected override _style = new TextStyle(this)

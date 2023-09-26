@@ -1,9 +1,9 @@
-import { Animation, Canvas, Effect, Image, Node2D, Text } from 'rubickjs'
+import { Animation, Effect, Engine, Image, Node2D, Text } from 'rubickjs'
 
-const canvas = new Canvas().observe()
+const engine = new Engine()
 
 // view
-const view = canvas.view!
+const view = engine.observeView().view!
 view.style.width = '100vw'
 view.style.height = '100vh'
 document.body.append(view)
@@ -20,13 +20,13 @@ const text = new Text('Hello, World!', {
   backgroundColor: '#0000FF',
   textDecoration: 'underline',
 })
-canvas.addChild(text)
+engine.root.addChild(text)
 
 // sprite
 const bunny = new Image('https://pixijs.com/assets/bunny.png', {
   backgroundColor: '#0000FF',
 })
-canvas.addChild(bunny)
+engine.root.addChild(bunny)
 
 // group
 const group = new Node2D({
@@ -65,17 +65,17 @@ group.addChild(
   }),
 )
 
-canvas.addChild(group)
+engine.root.addChild(group)
 
-canvas.timeline.on('update', (_, delta) => {
-  bunny.x = canvas.width / 2 - bunny.width / 2
-  bunny.y = canvas.height / 2 - bunny.height / 2
+engine.timeline.on('update', (_, delta) => {
+  bunny.x = engine.width / 2 - bunny.width / 2
+  bunny.y = engine.height / 2 - bunny.height / 2
   bunny.rotation += 0.001 * delta
   group.rotation += 0.001 * delta
 })
 
-canvas.start()
+engine.start()
 
-;(window as any).canvas = canvas
+;(window as any).engine = engine
 ;(window as any).group = group
 ;(window as any).bunny = bunny

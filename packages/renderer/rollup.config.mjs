@@ -5,5 +5,5 @@ export default createConfig({
   pkg: JSON.parse(
     readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
   ),
-  umdName: 'Rubickjs.Renderer',
+  umdName: 'Rubick.Renderer',
 })

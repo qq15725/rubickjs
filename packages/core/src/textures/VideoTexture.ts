@@ -1,4 +1,4 @@
-import { crossOrigin, isVideoElement } from '@rubickjs/shared'
+import { crossOrigin, defineProxiedProp, isVideoElement } from '@rubickjs/shared'
 import { Ticker } from '../Ticker'
 import { Texture } from './Texture'
 
@@ -48,12 +48,13 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
   set currentTime(val) { this.source.currentTime = val }
 
   protected _autoUpdate = true
-  get autoUpdate() { return this._autoUpdate }
-  set autoUpdate(val) { this._updateProp('_autoUpdate', val, { on: '_onUpdateAutoUpdate' }) }
+  @defineProxiedProp({ on: '_onUpdateAutoUpdate' })
+  public autoUpdate!: boolean
 
   protected _fps = 0
-  get fps() { return this._fps }
-  set fps(val) { this._updateProp('_fps', val, { on: '_onUpdateFps' }) }
+  @defineProxiedProp({ on: '_onUpdateFps' })
+  public fps!: number
+
   protected _spf = this._fps ? Math.floor(1000 / this._fps) : 0
 
   protected _autoPlay = false

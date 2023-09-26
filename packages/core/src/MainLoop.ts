@@ -1,31 +1,20 @@
+import { defineProxiedProp } from '@rubickjs/shared'
 import { Resource } from './Resource'
 import { Ticker } from './Ticker'
 
 export abstract class MainLoop extends Resource {
   /** FPS */
   protected _fps?: number
-  get fps() { return this._fps }
-  set fps(val) {
-    const oldVal = this._fps
-    if (val !== oldVal) {
-      this._fps = val
-      this._onUpdateFps(val, oldVal)
-    }
-  }
+  @defineProxiedProp({ on: '_onUpdateFps' })
+  public fps?: number
 
   /** SPF */
   protected _spf?: number
 
   /** Speed */
   protected _speed = 1
-  get speed() { return this._speed }
-  set speed(val) {
-    const oldVal = this._speed
-    if (val !== oldVal) {
-      this._speed = val
-      this._onUpdateSpeed(val, oldVal)
-    }
-  }
+  @defineProxiedProp({ on: '_onUpdateSpeed' })
+  public speed!: number
 
   /** Starting */
   protected _starting = false

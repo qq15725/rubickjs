@@ -1,4 +1,5 @@
 import { clamp } from '@rubickjs/math'
+import { defineProxiedProp } from '@rubickjs/shared'
 import { Sprite } from './Sprite'
 import type { Texture } from '@rubickjs/core'
 
@@ -9,8 +10,8 @@ export interface AnimatedSpriteFrame {
 
 export class AnimatedSprite extends Sprite {
   protected _frames: Array<AnimatedSpriteFrame> = []
-  get frames() { return this._frames }
-  set frames(val) { this._updateProp('_frames', val, { on: '_onUpdateFrames' }) }
+  @defineProxiedProp({ on: '_onUpdateFrames' })
+  public frames!: Array<AnimatedSpriteFrame>
 
   protected _duration = 0
   get duration() { return this._duration }

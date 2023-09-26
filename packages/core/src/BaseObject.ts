@@ -31,21 +31,4 @@ export class BaseObject extends EventEmitter {
   setMeta(name: string, value: any): void { this._meta.set(name, value) }
   deleteMeta(name: string): void { this._meta.delete(name) }
   clearMeta() { this._meta.clear() }
-
-  /** Prop */
-  protected _updateProp<T>(
-    key: string, val: T,
-    options?: {
-      on?: string
-      dirty?: string
-    },
-  ) {
-    const anyThis = this as any
-    const oldVal = anyThis[key] as T
-    if (val !== oldVal) {
-      anyThis[key] = val
-      if (options?.dirty) this.addDirty(options.dirty)
-      if (options?.on) anyThis[options.on]?.(val)
-    }
-  }
 }

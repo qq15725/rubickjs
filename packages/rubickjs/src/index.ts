@@ -9,5 +9,5 @@ export * from '@rubickjs/math'
 export * from '@rubickjs/renderer'
 export * from '@rubickjs/shared'
 
-export * from './Canvas'
-export * from './CanvasOptions'
+export * from './Engine'
+export * from './EngineOptions'
