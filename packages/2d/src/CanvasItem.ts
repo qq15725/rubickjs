@@ -13,7 +13,7 @@ export class CanvasItem extends Node {
 
   /** Alpha */
   protected _alpha = 1
-  @defineProxiedProp({ on: '_onUpdateAlpha', transformIn: val => clamp(0, val, 1) })
+  @defineProxiedProp({ on: '_onUpdateAlpha', set: val => clamp(0, val, 1) })
   public alpha!: number
 
   protected _parentAlphaDirtyId?: number

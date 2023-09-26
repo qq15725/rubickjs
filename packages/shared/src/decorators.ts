@@ -1,8 +1,8 @@
 export interface DefineProxiedPropOptions {
-  internalKey?: string
+  internal?: string
   defaultValue?: any
-  transformIn?: (val: any) => any
-  transformOut?: (val: any) => any
+  get?: (val: any) => any
+  set?: (val: any) => any
   on?: string
   enumerable?: boolean
   configurable?: boolean
@@ -10,19 +10,19 @@ export interface DefineProxiedPropOptions {
 
 export function defineProxiedProp(options: DefineProxiedPropOptions = {}) {
   return function (target: any, key: string) {
-    const { internalKey = `_${ key }`, on, transformIn, transformOut, defaultValue } = options
+    const { internal = `_${ key }`, on, get, set, defaultValue } = options
 
     Object.defineProperty(target, key, {
       get() {
-        let val = this[internalKey] ?? defaultValue
-        if (transformOut) val = transformOut(val)
+        let val = this[internal] ?? defaultValue
+        if (get) val = get(val)
         return val
       },
       set(val: any) {
         const oldVal = this[key]
-        if (transformIn) val = transformIn(val)
+        if (set) val = set(val)
         if (val !== oldVal) {
-          this[internalKey] = val
+          this[internal] = val
           if (on) this[on]?.(val, oldVal)
         }
       },
