@@ -1,33 +1,50 @@
-export interface DefineProxiedPropOptions {
+interface PropDefinition {
+  [key: string]: any
   internal?: string
-  defaultValue?: any
-  get?: (val: any) => any
-  set?: (val: any) => any
-  on?: string
+  default?: any
+  transformIn?: (val: any) => any
+  transformOut?: (val: any) => any
+  onUpdated?: string
   enumerable?: boolean
   configurable?: boolean
 }
 
-export function defineProxiedProp(options: DefineProxiedPropOptions = {}) {
-  return function (target: any, key: string) {
-    const { internal = `_${ key }`, on, get, set, defaultValue } = options
+export function defineProps(props: Record<string, PropDefinition>) {
+  return function (Klass: any) {
+    for (const key in props) {
+      const prop = props[key]
 
-    Object.defineProperty(target, key, {
-      get() {
-        let val = this[internal] ?? defaultValue
-        if (get) val = get(val)
-        return val
-      },
-      set(val: any) {
-        const oldVal = this[key]
-        if (set) val = set(val)
-        if (val !== oldVal) {
-          this[internal] = val
-          if (on) this[on]?.(val, oldVal)
-        }
-      },
-      enumerable: options.enumerable ?? false,
-      configurable: options.configurable ?? true,
+      const {
+        internal = `_${ key }`,
+        onUpdated,
+        transformIn,
+        transformOut,
+        default: defaultValue,
+      } = prop
+
+      Object.defineProperty(Klass.prototype, key, {
+        get() {
+          let val = this[internal] ?? defaultValue
+          if (transformIn) val = transformIn(val)
+          return val
+        },
+        set(val: any) {
+          const oldVal = this[key]
+          if (transformOut) val = transformOut(val)
+          if (val !== oldVal) {
+            this[internal] = val
+            if (onUpdated) this[onUpdated]?.(val, oldVal)
+          }
+        },
+        enumerable: prop.enumerable ?? false,
+        configurable: prop.configurable ?? true,
+      })
+    }
+
+    Object.defineProperty(Klass, '_props', {
+      value: props,
+      enumerable: false,
+      configurable: true,
     })
   }
 }

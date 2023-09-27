@@ -1,10 +1,21 @@
 import { clamp } from '@rubickjs/math'
 import { Color, ColorMatrix } from '@rubickjs/color'
 import { Node } from '@rubickjs/core'
-import { defineProxiedProp } from '@rubickjs/shared'
+import { defineProps } from '@rubickjs/shared'
 import { CanvasItemStyle } from './CanvasItemStyle'
 import type { ColorValue } from '@rubickjs/color'
 
+export interface CanvasItem {
+  alpha: number
+}
+
+@defineProps({
+  alpha: {
+    internal: '_alpha',
+    onUpdated: '_onUpdateAlpha',
+    transformOut: val => clamp(0, val, 1),
+  },
+})
 export class CanvasItem extends Node {
   /** Tint */
   protected _tint = new Color(0xFFFFFF)
@@ -13,9 +24,6 @@ export class CanvasItem extends Node {
 
   /** Alpha */
   protected _alpha = 1
-  @defineProxiedProp({ on: '_onUpdateAlpha', set: val => clamp(0, val, 1) })
-  public alpha!: number
-
   protected _parentAlphaDirtyId?: number
 
   /** Global alpha */

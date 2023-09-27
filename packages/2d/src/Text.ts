@@ -1,4 +1,4 @@
-import { IN_BROWSER, defineProxiedProp } from '@rubickjs/shared'
+import { IN_BROWSER, defineProps } from '@rubickjs/shared'
 import { Texture } from '@rubickjs/core'
 import { TextStyle } from './TextStyle'
 import { Sprite } from './Sprite'
@@ -12,71 +12,105 @@ export type TextAlign = 'center' | 'end' | 'left' | 'right' | 'start'
 export type TextBaseline = 'alphabetic' | 'bottom' | 'hanging' | 'ideographic' | 'middle' | 'top'
 export type TextDecoration = 'underline' | 'line-through'
 
-export interface TextParagraph extends TextChar {
-  chars: Array<TextChar>
+export interface TextOnlyStyle {
+  color: string
+  fontSize: number
+  fontWeight: FontWeight
+  fontFamily: string
+  fontStyle: FontStyle
+  fontKerning: FontKerning
+  text: string
+  textWrap: TextWrap
+  textAlign: TextAlign
+  textBaseline: TextBaseline
+  textDecoration: TextDecoration | null
+  direction: 'inherit' | 'ltr' | 'rtl'
+  lineHeight: number
 }
 
-export interface TextChar {
-  x: number
-  y: number
+export interface StyleableTextParagraph {
+  fragments?: Array<StyleableTextFragment>
+  text?: string
+  style?: Partial<TextOnlyStyle>
+}
+
+export interface StyleableTextFragment {
+  text: string
+  style?: Partial<TextOnlyStyle>
+}
+
+export interface TextParagraph {
   width: number
   height: number
-  text: string
+  relativeX: number
+  relativeY: number
+  absoluteX: number
+  absoluteY: number
+  fragments: Array<TextFragment>
 }
 
+export interface TextFragment {
+  width: number
+  height: number
+  relativeX: number
+  relativeY: number
+  absoluteX: number
+  absoluteY: number
+  fillX: number
+  fillY: number
+  text: string
+  style: Partial<TextOnlyStyle>
+}
+
+export interface Text {
+  pixelRatio: number
+  color: ColorValue
+  fontSize: number
+  fontWeight: FontWeight
+  fontFamily: string
+  fontStyle: FontStyle
+  fontKerning: FontKerning
+  text: string | Array<StyleableTextParagraph>
+  textWrap: TextWrap
+  textAlign: TextAlign
+  textBaseline: TextBaseline
+  textDecoration: TextDecoration | null
+  direction: 'inherit' | 'ltr' | 'rtl'
+  lineHeight: number
+}
+
+@defineProps({
+  text: { internal: '_text', onUpdated: '_onUpdateText' },
+  pixelRatio: { internal: '_pixelRatio', onUpdated: 'scheduleUpdateTexture' },
+  color: { internal: '_color', onUpdated: 'scheduleUpdateTexture' },
+  fontSize: { internal: '_fontSize', onUpdated: 'scheduleUpdateTexture' },
+  fontWeight: { internal: '_fontWeight', onUpdated: 'scheduleUpdateTexture' },
+  fontFamily: { internal: '_fontFamily', onUpdated: 'scheduleUpdateTexture' },
+  fontStyle: { internal: '_fontStyle', onUpdated: 'scheduleUpdateTexture' },
+  fontKerning: { internal: '_fontKerning', onUpdated: 'scheduleUpdateTexture' },
+  textWrap: { internal: '_textWrap', onUpdated: 'scheduleUpdateTexture' },
+  textAlign: { internal: '_textAlign', onUpdated: 'scheduleUpdateTexture' },
+  textBaseline: { internal: '_textBaseline', onUpdated: 'scheduleUpdateTexture' },
+  textDecoration: { internal: '_textDecoration', onUpdated: 'scheduleUpdateTexture' },
+  direction: { internal: '_direction', onUpdated: 'scheduleUpdateTexture' },
+  lineHeight: { internal: '_lineHeight', onUpdated: 'scheduleUpdateTexture' },
+})
 export class Text extends Sprite<Texture<HTMLCanvasElement>> {
-  /** Pixel ratio */
+  protected _context: CanvasRenderingContext2D
+  protected _text: string | Array<StyleableTextParagraph> = ''
   protected _pixelRatio = 2
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public pixelRatio!: number
-
   protected _color: ColorValue = '#000000'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public color!: ColorValue
-
-  protected _fontSize = 14
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public fontSize!: number
-
+  protected _fontSize = 10
   protected _fontWeight: FontWeight = 'normal'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public fontWeight!: FontWeight
-
-  protected _fontFamily = 'monospace'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public fontFamily!: string
-
+  protected _fontFamily = 'sans-serif'
   protected _fontStyle: FontStyle = 'normal'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public fontStyle!: FontStyle
-
   protected _fontKerning: FontKerning = 'normal'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public fontKerning!: FontKerning
-
-  protected _text = ''
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public text!: string
-
   protected _textWrap: TextWrap = 'wrap'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public textWrap!: TextWrap
-
-  protected _textAlign: TextAlign = 'center'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public textAlign!: TextAlign
-
+  protected _textAlign: TextAlign = 'start'
   protected _textBaseline: TextBaseline = 'middle'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public textBaseline!: TextBaseline
-
-  protected _textDecoration: TextDecoration | undefined = undefined
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public textDecoration!: TextDecoration | undefined
-
+  protected _textDecoration: TextDecoration | null = null
   protected _direction: 'inherit' | 'ltr' | 'rtl' = 'inherit'
-  @defineProxiedProp({ on: 'scheduleUpdateTexture' })
-  public direction!: 'inherit' | 'ltr' | 'rtl'
+  protected _lineHeight = 1.2
 
   /** Style */
   protected override _style = new TextStyle(this)
@@ -84,7 +118,7 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
   set style(val: Partial<TextStyle>) { this._style.update(val) }
 
   constructor(
-    text: string,
+    text: string | Array<StyleableTextParagraph>,
     style?: Partial<TextStyle>,
   ) {
     const canvas = document.createElement('canvas')
@@ -95,6 +129,7 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
         ? new Texture(canvas)
         : undefined,
     )
+    this._context = canvas.getContext('2d')!
     this.text = text
     if (style) this.style = style
   }
@@ -106,185 +141,304 @@ export class Text extends Sprite<Texture<HTMLCanvasElement>> {
 
   scheduleUpdateTexture() { this.addDirty('texture') }
 
-  measure(width = 0) {
-    const context = this._texture.source.getContext('2d')
-    if (!context) {
-      throw new Error('Failed to measureText')
-    }
-    context.textBaseline = this._textBaseline
-    context.textAlign = this._textAlign
-    context.font = `${ this._fontStyle } ${ this._fontWeight } ${ this._fontSize }px ${ this._fontFamily }`
+  protected _onUpdateText() {
+    this.scheduleUpdateTexture()
+  }
 
-    const charHeight = this._fontSize * 1.2
+  protected _createParagraphs(text: string | StyleableTextParagraph | Array<StyleableTextParagraph>): Array<TextParagraph> {
+    function createParagraph(props: Partial<TextParagraph> = {}): TextParagraph {
+      return {
+        width: 0,
+        height: 0,
+        relativeX: 0,
+        relativeY: 0,
+        absoluteX: 0,
+        absoluteY: 0,
+        fragments: [],
+        ...props,
+      }
+    }
+
+    function createFragment(props: Partial<TextFragment> = {}): TextFragment {
+      return {
+        width: 0,
+        height: 0,
+        relativeX: 0,
+        relativeY: 0,
+        absoluteX: 0,
+        absoluteY: 0,
+        fillX: 0,
+        fillY: 0,
+        style: {},
+        text: '',
+        ...props,
+      }
+    }
+
     const paragraphs: Array<TextParagraph> = []
-    let chars: Array<TextChar> = []
-    let offsetX = 0
-    let offsetY = 0
-
-    const addParagraph = () => {
-      paragraphs.push({
-        x: offsetX,
-        y: offsetY,
-        width: chars.reduce((width, char) => width + char.width, 0),
-        height: charHeight,
-        text: chars.reduce((text, char) => text + char.text, ''),
-        chars,
-      })
-      offsetX = 0
-      offsetY += charHeight
-      chars = []
-    }
-
-    this.text.split(/[\r\n]+/).forEach(text => {
-      for (const char of text) {
-        const charWidth = context.measureText(char).width || this._fontSize
-        if (this._textWrap === 'wrap' && width && offsetX + charWidth > width) {
-          addParagraph()
+    if (typeof text === 'string') {
+      paragraphs.push(
+        createParagraph({
+          fragments: [createFragment({ text })],
+        }),
+      )
+    } else {
+      text = Array.isArray(text) ? text : [text]
+      for (const p of text) {
+        const paragraph = createParagraph()
+        if (p.fragments) {
+          for (const f of p.fragments) {
+            paragraph.fragments.push(
+              createFragment({ text: f.text, style: { ...p.style, ...f.style } }),
+            )
+          }
+        } else if (p.text) {
+          paragraph.fragments.push(
+            createFragment({ text: p.text, style: p.style }),
+          )
         }
-        chars.push({
-          text: char,
-          x: offsetX,
-          y: offsetY,
-          width: charWidth,
-          height: charHeight,
-        })
-        offsetX += charWidth
+        paragraphs.push(paragraph)
       }
-      addParagraph()
-    })
-
-    if (chars.length) {
-      addParagraph()
     }
-
-    return {
-      paragraphs,
-      ...paragraphs.reduce((size, paragraph) => {
-        size.width = Math.max(size.width, paragraph.width)
-        size.height += paragraph.height
-        return size
-      }, { width: 0, height: 0 }),
-    }
+    return paragraphs
   }
 
-  protected _fillText(
-    paragraphs: Array<TextParagraph>,
-    width: number,
-    height: number,
-    textHeight: number,
-    y = 0,
-  ) {
-    const context = this._texture.source.getContext('2d')
-    if (!context) {
-      throw new Error('Failed to measureText')
+  protected _createWrapedParagraphs(paragraphs: Array<TextParagraph>): Array<TextParagraph> {
+    const width = this.width
+    const wrapedParagraphs: Array<TextParagraph> = []
+    const restParagraphs = paragraphs.slice()
+    let paragraph: TextParagraph | undefined
+    let fragment: TextFragment | undefined
+    // eslint-disable-next-line no-cond-assign
+    while (paragraph = restParagraphs.shift()) {
+      const restFragments = paragraph.fragments.slice()
+      let paragraphWidth = 0
+      const fragments = []
+      // eslint-disable-next-line no-cond-assign
+      while (fragment = restFragments.shift()) {
+        const style = fragment.style
+        const textWrap = style.textWrap ?? this._textWrap
+        this._setupContextStyle(style)
+        let text = ''
+        let wrap = false
+        for (const char of fragment.text) {
+          const charWidth = this._context.measureText(char).width
+          if (
+            textWrap === 'wrap'
+            && width
+            && paragraphWidth + charWidth > width
+          ) {
+            if (text.length) fragments.push({ ...fragment, text })
+            if (fragments.length) {
+              wrapedParagraphs.push({ ...paragraph, fragments: fragments.slice() })
+              fragments.length = 0
+            }
+            restParagraphs.unshift({
+              ...paragraph,
+              fragments: [
+                { ...fragment, text: fragment.text.substring(text.length) },
+              ].concat(restFragments.slice()),
+            })
+            restFragments.length = 0
+            wrap = true
+            break
+          } else {
+            paragraphWidth += charWidth
+          }
+          text += char
+        }
+        if (!wrap) fragments.push({ ...fragment })
+      }
+      if (fragments.length) {
+        wrapedParagraphs.push({ ...paragraph, fragments })
+      }
     }
+    return wrapedParagraphs
+  }
+
+  protected _measure(paragraphs: Array<TextParagraph>, width = 0, height = 0) {
+    const context = this._context
+    let paragraphOffsetY = 0
+    for (let len = paragraphs.length, i = 0; i < len; i++) {
+      const paragraph = paragraphs[i]
+      paragraph.relativeX = 0
+      paragraph.relativeY = paragraphOffsetY
+      paragraph.width = 0
+      paragraph.height = 0
+      let textOffsetX = 0
+      for (const text of paragraph.fragments) {
+        const style = text.style
+        this._setupContextStyle(style)
+        const textWidth = context.measureText(text.text).width
+        const fontSize = style.fontSize ?? this._fontSize
+        const lineHeight = style.lineHeight ?? this._lineHeight
+        const textHeight = fontSize * lineHeight
+        text.relativeX = textOffsetX
+        text.relativeY = paragraph.relativeY
+        text.width = textWidth
+        text.height = textHeight
+        textOffsetX += textWidth
+        paragraph.width += textWidth
+        paragraph.height = Math.max(paragraph.height, text.height)
+      }
+      paragraphOffsetY += paragraph.height
+    }
+
+    const boundingRect = paragraphs.reduce((rect, paragraph) => {
+      rect.x = Math.min(rect.x, paragraph.relativeX)
+      rect.y = Math.min(rect.y, paragraph.relativeY)
+      rect.width = Math.max(rect.width, paragraph.width)
+      rect.height += paragraph.height
+      return rect
+    }, { x: 0, y: 0, width: 0, height: 0 })
+
+    for (let len = paragraphs.length, i = 0; i < len; i++) {
+      const paragraph = paragraphs[i]
+
+      if (width) {
+        let absoluteX = 0
+        switch (this._textAlign) {
+          case 'start':
+          case 'left':
+            absoluteX = paragraph.absoluteX = 0
+            paragraph.fragments.forEach(fragment => {
+              fragment.absoluteX = absoluteX
+              fragment.fillX = absoluteX
+              absoluteX += fragment.width
+            })
+            break
+          case 'center':
+            absoluteX = paragraph.absoluteX = (width - boundingRect.width) / 2
+            paragraph.fragments.forEach(fragment => {
+              fragment.absoluteX = absoluteX
+              fragment.fillX = absoluteX + fragment.width / 2
+              absoluteX += fragment.width
+            })
+            break
+          case 'end':
+          case 'right':
+            absoluteX = paragraph.absoluteX = width - boundingRect.width
+            paragraph.fragments.forEach(fragment => {
+              fragment.absoluteX = absoluteX
+              fragment.fillX = absoluteX + fragment.width
+              absoluteX += fragment.width
+            })
+            break
+        }
+      }
+
+      if (height) {
+        switch (this._textBaseline) {
+          case 'top':
+          case 'hanging':
+            paragraph.absoluteY = paragraph.relativeY
+            paragraph.fragments.forEach(fragment => {
+              fragment.fillY = paragraph.absoluteY
+              fragment.absoluteY = paragraph.absoluteY
+            })
+            break
+          case 'middle':
+          case 'alphabetic':
+          case 'ideographic':
+            paragraph.absoluteY = paragraph.relativeY + (height - boundingRect.height) / 2
+            paragraph.fragments.forEach(fragment => {
+              fragment.fillY = paragraph.absoluteY + paragraph.height / 2
+              fragment.absoluteY = fragment.fillY - fragment.height / 2
+            })
+            break
+          case 'bottom':
+            paragraph.absoluteY = paragraph.relativeY + height - boundingRect.height
+            paragraph.fragments.forEach(fragment => {
+              fragment.fillY = paragraph.absoluteY + paragraph.height
+              fragment.absoluteY = fragment.fillY - fragment.height
+            })
+            break
+        }
+      }
+    }
+
+    return boundingRect
+  }
+
+  protected _fillText(paragraphs: Array<TextParagraph>) {
+    const context = this._context
     paragraphs.forEach(paragraph => {
-      const fillPosition = [0, 0]
-
-      switch (this._textAlign) {
-        case 'start':
-        case 'left':
-          paragraph.x = 0
-          fillPosition[0] = 0
-          break
-        case 'center':
-          paragraph.x = (width - paragraph.width) / 2
-          fillPosition[0] = width / 2
-          break
-        case 'end':
-        case 'right':
-          paragraph.x = width - paragraph.width
-          fillPosition[0] = width
-          break
-      }
-
-      switch (this._textBaseline) {
-        case 'top':
-        case 'hanging':
-          paragraph.y = y
-          fillPosition[1] = y
-          break
-        case 'middle':
-        case 'alphabetic':
-        case 'ideographic':
-          paragraph.y = y + (height - textHeight) / 2
-          fillPosition[1] = paragraph.y + paragraph.height / 2
-          break
-        case 'bottom':
-          paragraph.y = y + height - textHeight
-          fillPosition[1] = paragraph.y + paragraph.height
-          break
-      }
-
-      context.fillText(paragraph.text, fillPosition[0], fillPosition[1])
-
-      switch (this._textDecoration) {
-        case 'underline':
-          context.beginPath()
-          context.moveTo(paragraph.x, paragraph.y + paragraph.height - 2)
-          context.lineTo(paragraph.x + paragraph.width, paragraph.y + paragraph.height - 2)
-          context.stroke()
-          break
-        case 'line-through':
-          context.beginPath()
-          context.moveTo(paragraph.x, paragraph.y + paragraph.height / 2)
-          context.lineTo(paragraph.x + paragraph.width, paragraph.y + paragraph.height / 2)
-          context.stroke()
-          break
-      }
-
-      y += paragraph.height
+      paragraph.fragments.forEach(text => {
+        this._setupContextStyle(text.style)
+        context.fillText(text.text, text.fillX, text.fillY)
+        switch (text.style.textDecoration ?? this._textDecoration) {
+          case 'underline':
+            context.beginPath()
+            context.moveTo(text.absoluteX, paragraph.absoluteY + paragraph.height - 2)
+            context.lineTo(text.absoluteX + text.width, paragraph.absoluteY + paragraph.height - 2)
+            context.stroke()
+            break
+          case 'line-through':
+            context.beginPath()
+            context.moveTo(text.absoluteX, paragraph.absoluteY + paragraph.height / 2)
+            context.lineTo(text.absoluteX + text.width, paragraph.absoluteY + paragraph.height / 2)
+            context.stroke()
+            break
+        }
+      })
     })
-    return y
   }
 
-  updateTexture() {
-    if (!this.hasDirty('texture')) return
-    this.deleteDirty('texture')
-
+  protected _resizeCanvas(width: number, height: number) {
     const canvas = this._texture.source
-
-    const context = canvas.getContext('2d')
-    if (!context) {
-      console.warn('Failed to getContext(\'2d\') in updateTexture')
-      return
-    }
-
-    let [width, height] = this.size
-    const { paragraphs, width: textWidth, height: textHeight } = this.measure(width)
-    if (!width) width = textWidth
-    if (!height) height = textHeight
-
     canvas.style.width = `${ width }px`
     canvas.style.height = `${ height }px`
     canvas.dataset.width = String(width)
     canvas.dataset.height = String(height)
     canvas.width = Math.max(1, Math.floor(width * this._pixelRatio))
     canvas.height = Math.max(1, Math.floor(height * this._pixelRatio))
-    context.strokeStyle = context.fillStyle = this._color as string
+  }
+
+  protected _setupContextStyle(style?: Partial<TextOnlyStyle>) {
+    const context = this._context
+    context.strokeStyle = style?.color ?? this._color as string
+    context.fillStyle = style?.color ?? this._color as string
     context.lineWidth = 2
-    context.direction = this._direction
-    context.textAlign = this._textAlign
-    context.textBaseline = this._textBaseline
-    context.font = `${ this._fontStyle } ${ this._fontWeight } ${ this._fontSize }px ${ this._fontFamily }`
-    context.fontKerning = this._fontKerning
+    context.direction = style?.direction ?? this._direction
+    context.textAlign = style?.textAlign ?? this._textAlign
+    context.textBaseline = style?.textBaseline ?? this._textBaseline
+    context.font = [
+      style?.fontStyle ?? this._fontStyle,
+      style?.fontWeight ?? this._fontWeight,
+      `${ style?.fontSize ?? this._fontSize }px`,
+      style?.fontFamily ?? this._fontFamily,
+    ].join(' ')
+    context.fontKerning = style?.fontKerning ?? this._fontKerning
+  }
 
+  updateTexture() {
+    const context = this._texture.source.getContext('2d')
+    if (!context) {
+      console.warn('Failed to getContext(\'2d\') in updateTexture')
+      return
+    }
+    this._context = context
+
+    let [width, height] = this.size
+    let paragraphs = this._createParagraphs(this._text)
+    paragraphs = this._createWrapedParagraphs(paragraphs)
+    const result = this._measure(paragraphs, width, height)
+    if (!width) width = result.width
+    if (!height) height = result.height
+    this._resizeCanvas(width, height)
     context.scale(this._pixelRatio, this._pixelRatio)
-    context.clearRect(0, 0, canvas.width, canvas.height)
-
-    this._fillText(
-      paragraphs,
-      width,
-      height,
-      textHeight,
-    )
-
+    context.clearRect(0, 0, context.canvas.width, context.canvas.height)
+    this._fillText(paragraphs)
     this._texture.updateSource()
     this.size.update(width, height)
   }
 
   protected override _process(delta: number) {
-    this.updateTexture()
+    if (this.hasDirty('texture')) {
+      this.deleteDirty('texture')
+      this.updateTexture()
+    }
+
     super._process(delta)
   }
 }

@@ -1,20 +1,18 @@
-import { defineProxiedProp } from '@rubickjs/shared'
+import { defineProps } from '@rubickjs/shared'
 import { Resource } from './Resource'
 import { Ticker } from './Ticker'
 
+export interface MainLoop {
+  fps: number
+}
+
+@defineProps({
+  fps: { internal: '_fps', onUpdated: '_onUpdateFps' },
+})
 export abstract class MainLoop extends Resource {
-  /** FPS */
   protected _fps?: number
-  @defineProxiedProp({ on: '_onUpdateFps' })
-  public fps?: number
-
-  /** SPF */
   protected _spf?: number
-
-  /** Speed */
-  protected _speed = 1
-  @defineProxiedProp({ on: '_onUpdateSpeed' })
-  public speed!: number
+  speed = 1
 
   /** Starting */
   protected _starting = false
@@ -25,7 +23,6 @@ export abstract class MainLoop extends Resource {
   protected _nextProcessDeltaTime = 0
   protected _process?: (delta: number) => void
 
-  protected _onUpdateSpeed(_val: number, _oldVal: number): void { /** override */ }
   protected _onUpdateFps(val: number | undefined, _oldVal: number | undefined): void {
     this._spf = val ? Math.floor(1000 / val) : undefined
   }
@@ -46,7 +43,7 @@ export abstract class MainLoop extends Resource {
   }
 
   protected _onTick = () => {
-    const elapsed = Ticker.instance.elapsed * this._speed
+    const elapsed = Ticker.instance.elapsed * this.speed
     const time = this._nextProcessDeltaTime -= elapsed
     if (time <= 0) {
       const delta = (this._nextProcessDeltaTime = this._spf || 0) || elapsed

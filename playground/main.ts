@@ -9,18 +9,27 @@ view.style.height = '100vh'
 document.body.append(view)
 
 // text
-const text = new Text('Hello, World!', {
+const text = new Text([
+  {
+    fragments: [
+      { text: 'He', style: { color: 'red', fontSize: 12 } },
+      { text: 'llo', style: { color: 'black' } },
+    ],
+  },
+  { text: ', ', style: { color: 'grey' } },
+  { text: 'World!', style: { color: 'black' } },
+], {
   left: 100,
   top: 100,
   width: 100,
   height: 200,
   fontSize: 22,
-  textWrap: 'wrap',
-  color: 'red',
   backgroundColor: '#0000FF',
   textDecoration: 'underline',
 })
+
 engine.root.addChild(text)
+engine.root.addChild(new Text('Text12312211221'))
 
 // sprite
 const bunny = new Image('https://pixijs.com/assets/bunny.png', {

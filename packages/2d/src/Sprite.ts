@@ -1,11 +1,18 @@
 import { PointerInputEvent } from '@rubickjs/input'
 import { Texture } from '@rubickjs/core'
-import { defineProxiedProp } from '@rubickjs/shared'
+import { defineProps } from '@rubickjs/shared'
 import { Node2D } from './Node2D'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
 import type { Rectangle } from '@rubickjs/math'
 
+export interface Sprite<T extends Texture = Texture> {
+  texture: T
+}
+
+@defineProps({
+  texture: { onUpdated: '_onUpdateTexture' },
+})
 export class Sprite<T extends Texture = Texture> extends Node2D {
   /** Flag */
   protected override _renderable = true
@@ -14,8 +21,6 @@ export class Sprite<T extends Texture = Texture> extends Node2D {
   trim?: Rectangle
 
   protected _texture!: T
-  @defineProxiedProp({ on: '_onUpdateTexture' })
-  public texture!: T
 
   /** Batch draw */
   protected _vertices?: Float32Array

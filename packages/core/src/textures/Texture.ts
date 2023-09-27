@@ -1,4 +1,5 @@
 import { Vector2 } from '@rubickjs/math'
+import { defineProps } from '@rubickjs/shared'
 import { Resource } from '../Resource'
 import type { WebGLRenderer, WebGLTextureFilterMode, WebGLTextureWrapMode } from '@rubickjs/renderer'
 
@@ -11,6 +12,17 @@ export type TexturePixelsSource = {
 }
 export type TextureSource = TexImageSource | TexturePixelsSource
 
+export interface Texture {
+  filterMode: TextureFilterMode
+  wrapMode: TextureWrapMode
+  pixelRatio: number
+}
+
+@defineProps({
+  filterMode: { internal: '_filterMode', onUpdated: 'updateSource' },
+  wrapMode: { internal: '_wrapMode', onUpdated: 'updateSource' },
+  pixelRatio: { internal: '_pixelRatio', onUpdated: 'updateSource' },
+})
 export class Texture<T extends TextureSource = TextureSource> extends Resource {
   /** Empty texture */
   static get EMPTY() { return new this({ width: 1, height: 1, pixels: null }) }
@@ -28,35 +40,9 @@ export class Texture<T extends TextureSource = TextureSource> extends Resource {
   set height(val) { this._size.y = val }
   get valid(): boolean { return Boolean(this._size[0] && this._size[1]) }
 
-  /** Filter mode */
   protected _filterMode: TextureFilterMode = 'linear'
-  get filterMode() { return this._filterMode }
-  set filterMode(val) {
-    if (this._filterMode === val) {
-      this._filterMode = val
-      this.addDirty('filterMode')
-    }
-  }
-
-  /** Wrap mode */
   protected _wrapMode: TextureWrapMode = 'clamp_to_edge'
-  get wrapMode() { return this._wrapMode }
-  set wrapMode(val) {
-    if (this._wrapMode !== val) {
-      this._wrapMode = val
-      this.addDirty('wrapMode')
-    }
-  }
-
-  /** Pixel ratio */
   protected _pixelRatio = 1
-  get pixelRatio() { return this._pixelRatio }
-  set pixelRatio(val) {
-    if (this._pixelRatio !== val) {
-      this._pixelRatio = val
-      this.addDirty('pixelRatio')
-    }
-  }
 
   constructor(
     public source: T,

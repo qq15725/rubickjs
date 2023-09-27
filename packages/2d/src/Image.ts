@@ -1,14 +1,19 @@
 import { Assets } from '@rubickjs/assets'
 import { ImageTexture } from '@rubickjs/core'
-import { defineProxiedProp } from '@rubickjs/shared'
+import { defineProps } from '@rubickjs/shared'
 import { Sprite } from './Sprite'
 import type { Node2DStyle } from './Node2DStyle'
 
+export interface Image {
+  src: string
+}
+
+@defineProps({
+  src: { internal: '_src', onUpdated: '_onUpdateSrc' },
+})
 export class Image extends Sprite<ImageTexture> {
   protected _srcLoad?: Promise<this>
   protected _src!: string
-  @defineProxiedProp({ on: '_onUpdateSrc' })
-  public src!: string
 
   constructor(
     src = '',

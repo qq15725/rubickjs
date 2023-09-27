@@ -9,7 +9,7 @@ export interface ImageTextureOptions {
   // alphaMode?: ALPHA_MODES
 }
 
-function resovledOptions(options?: ImageTextureOptions): Required<ImageTextureOptions> {
+function resolveOptions(options?: ImageTextureOptions): Required<ImageTextureOptions> {
   return {
     autoLoad: Boolean(options?.autoLoad ?? true),
     useBitmap: Boolean(options?.useBitmap ?? true) && SUPPORTS_CREATE_IMAGE_BITMAP,
@@ -32,7 +32,7 @@ export class ImageTexture extends Texture<HTMLImageElement> {
     source: HTMLImageElement | string,
     options?: ImageTextureOptions,
   ) {
-    const resovled = resovledOptions(options)
+    const resovled = resolveOptions(options)
 
     if (typeof source === 'string') {
       const imageElement = new Image()

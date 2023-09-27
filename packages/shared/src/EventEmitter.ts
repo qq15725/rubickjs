@@ -1,16 +1,15 @@
-interface EventListener {
-  (...args: any[]): void
-}
+type Listener = (...args: any[]) => void
+type Options = boolean | AddEventListenerOptions
 
-interface EventListenerObject {
-  value: EventListener
-  options?: boolean | AddEventListenerOptions
+interface EventListener {
+  value: Listener
+  options?: Options
 }
 
 export class EventEmitter {
-  protected _eventListeners = new Map<string, EventListenerObject | EventListenerObject[]>()
+  protected _eventListeners = new Map<string, EventListener | Array<EventListener>>()
 
-  addEventListener(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): this {
+  addEventListener(event: string, listener: Listener, options?: Options): this {
     const object = { value: listener, options }
     const listeners = this._eventListeners.get(event)
     if (!listeners) {
@@ -23,7 +22,7 @@ export class EventEmitter {
     return this
   }
 
-  removeEventListener(event: string, listener?: EventListener, options?: boolean | AddEventListenerOptions): this {
+  removeEventListener(event: string, listener?: Listener, options?: Options): this {
     if (!listener) {
       this._eventListeners.delete(event)
       return this
@@ -101,15 +100,15 @@ export class EventEmitter {
     }
   }
 
-  on(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): this {
+  on(event: string, listener: Listener, options?: Options): this {
     return this.addEventListener(event, listener, options)
   }
 
-  once(event: string, listener: EventListener): this {
+  once(event: string, listener: Listener): this {
     return this.addEventListener(event, listener, { once: true })
   }
 
-  off(event: string, listener: EventListener, options?: boolean | AddEventListenerOptions): this {
+  off(event: string, listener: Listener, options?: Options): this {
     return this.removeEventListener(event, listener, options)
   }
 

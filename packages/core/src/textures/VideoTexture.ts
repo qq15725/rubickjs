@@ -1,4 +1,4 @@
-import { crossOrigin, defineProxiedProp, isVideoElement } from '@rubickjs/shared'
+import { crossOrigin, defineProps, isVideoElement } from '@rubickjs/shared'
 import { Ticker } from '../Ticker'
 import { Texture } from './Texture'
 
@@ -29,6 +29,15 @@ function resolveOptions(options?: VideoTextureOptions): Required<VideoTextureOpt
   }
 }
 
+export interface VideoTexture {
+  autoUpdate: boolean
+  fps: number
+}
+
+@defineProps({
+  autoUpdate: { internal: '_autoUpdate', onUpdated: '_onUpdateAutoUpdate' },
+  fps: { internal: '_fps', onUpdated: '_onUpdateFps' },
+})
 export class VideoTexture extends Texture<HTMLVideoElement> {
   /** List of common video file extensions supported by VideoTexture. */
   static readonly TYPES = new Set(['mp4', 'm4v', 'webm', 'ogg', 'ogv', 'h264', 'avi', 'mov'])
@@ -48,17 +57,9 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
   set currentTime(val) { this.source.currentTime = val }
 
   protected _autoUpdate = true
-  @defineProxiedProp({ on: '_onUpdateAutoUpdate' })
-  public autoUpdate!: boolean
-
   protected _fps = 0
-  @defineProxiedProp({ on: '_onUpdateFps' })
-  public fps!: number
-
   protected _spf = this._fps ? Math.floor(1000 / this._fps) : 0
-
   protected _autoPlay = false
-
   protected _sourceLoad?: Promise<this>
   protected _nextTime = 0
   protected _connected = false
