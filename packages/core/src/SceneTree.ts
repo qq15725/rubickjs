@@ -1,16 +1,18 @@
 import { QuadUvGeometry } from './geometries'
-import { Root } from './viewports'
+import { Root } from './Root'
 import { MainLoop } from './MainLoop'
 import { Timer } from './Timer'
-import { RenderQueue } from './RenderQueue'
 import { InternalMode } from './Node'
-import type { Viewport } from './viewports'
+import { customNode } from './decorators'
+import { RenderStack } from './RenderStack'
+import type { Viewport } from './Viewport'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
 
+@customNode('sceneTree')
 export class SceneTree extends MainLoop {
   readonly root = new Root(true)._setTree(this)
-  readonly renderQueue = new RenderQueue()
+  readonly renderStack = new RenderStack()
 
   protected _currentViewport?: Viewport
   getCurrentViewport() { return this._currentViewport }
@@ -28,24 +30,29 @@ export class SceneTree extends MainLoop {
   }
 
   render(renderer: WebGLRenderer): void {
-    this.emit('processFrame')
+    this.emit('processing')
     this.root.notification('process')
-    renderer.uniforms.projectionMatrix = this.root.projection.toArray(true)
-    this.renderQueue.handle(renderer)
+    this.emit('processed')
+    renderer.program.uniforms.projectionMatrix = this.root.toProjectionArray(true)
+    this.renderStack.render(renderer)
     this._renderToScreen(renderer)
   }
 
   protected _renderToScreen(renderer: WebGLRenderer) {
+    renderer.state.reset()
     const pixelRatio = renderer.pixelRatio
-    const [width, height] = this.root.projection.size
-    renderer.activeFramebuffer(null)
-    renderer.updateViewport(
-      0, 0,
-      width * pixelRatio,
-      height * pixelRatio,
-    )
+    const { width, height } = this.root
+    renderer.framebuffer.bind(null)
+    renderer.viewport.bind({
+      x: 0,
+      y: 0,
+      width: width * pixelRatio,
+      height: height * pixelRatio,
+    })
     renderer.clear()
-    this.root.texture.activate(renderer, 0)
+    const texture = this.root.texture
+    texture.activate(renderer, 0)
     QuadUvGeometry.draw(renderer)
+    renderer.texture.unbind(texture)
   }
 }

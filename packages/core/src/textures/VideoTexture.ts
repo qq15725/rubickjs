@@ -1,5 +1,6 @@
-import { crossOrigin, defineProps, isVideoElement } from '@rubickjs/shared'
-import { Ticker } from '../Ticker'
+import { crossOrigin, isVideoElement } from '@rubickjs/shared'
+import { property } from '../decorators'
+import { GlobalTicker } from '../global'
 import { Texture } from './Texture'
 
 export interface VideoTextureOptions {
@@ -29,16 +30,10 @@ function resolveOptions(options?: VideoTextureOptions): Required<VideoTextureOpt
   }
 }
 
-export interface VideoTexture {
-  autoUpdate: boolean
-  fps: number
-}
-
-@defineProps({
-  autoUpdate: { internal: '_autoUpdate', onUpdated: '_onUpdateAutoUpdate' },
-  fps: { internal: '_fps', onUpdated: '_onUpdateFps' },
-})
 export class VideoTexture extends Texture<HTMLVideoElement> {
+  @property() autoUpdate = true
+  @property() fps = 0
+
   /** List of common video file extensions supported by VideoTexture. */
   static readonly TYPES = new Set(['mp4', 'm4v', 'webm', 'ogg', 'ogv', 'h264', 'avi', 'mov'])
 
@@ -56,9 +51,7 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
   get currentTime(): number { return this.source.currentTime }
   set currentTime(val) { this.source.currentTime = val }
 
-  protected _autoUpdate = true
-  protected _fps = 0
-  protected _spf = this._fps ? Math.floor(1000 / this._fps) : 0
+  protected _spf = 0
   protected _autoPlay = false
   protected _sourceLoad?: Promise<this>
   protected _nextTime = 0
@@ -124,13 +117,18 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
     this._setupAutoUpdate()
   }
 
-  protected _onUpdateFps(val: number) {
-    this._spf = val ? Math.floor(1000 / val) : 0
-    this._setupAutoUpdate()
-  }
+  protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
+    super._onUpdateProperty(key, value, oldValue)
 
-  protected _onUpdateAutoUpdate() {
-    this._setupAutoUpdate()
+    switch (key) {
+      case 'fps':
+        this._spf = value ? Math.floor(1000 / value) : 0
+        this._setupAutoUpdate()
+        break
+      case 'autoUpdate':
+        this._setupAutoUpdate()
+        break
+    }
   }
 
   protected _onPlayStart = () => {
@@ -152,7 +150,7 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
     const valid = this.valid
 
     this._nextTime = 0
-    this.update()
+    this.requestUpload()
     this._nextTime = 0
 
     if (!valid && this._resolve) {
@@ -181,18 +179,18 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
 
   /** Fired when the video is completed seeking to the current playback position. */
   protected _onSeeked = (): void => {
-    if (this._autoUpdate && !this.isPlaying) {
+    if (this.autoUpdate && !this.isPlaying) {
       this._nextTime = 0
-      this.update()
+      this.requestUpload()
       this._nextTime = 0
     }
   }
 
   protected _setupAutoUpdate(): void {
-    if (this._autoUpdate && this.isPlaying) {
-      if (!this._fps && this.source.requestVideoFrameCallback) {
+    if (this.autoUpdate && this.isPlaying) {
+      if (!this.fps && this.source.requestVideoFrameCallback) {
         if (this._connected) {
-          Ticker.instance.off('update', this.update)
+          GlobalTicker.off(this.requestUpload)
           this._connected = false
           this._nextTime = 0
         }
@@ -209,7 +207,7 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
         }
 
         if (!this._connected) {
-          Ticker.instance.on('update', this.update)
+          GlobalTicker.on(this.requestUpload)
           this._connected = true
           this._nextTime = 0
         }
@@ -221,7 +219,7 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
       }
 
       if (this._connected) {
-        Ticker.instance.off('update', this.update)
+        GlobalTicker.off(this.requestUpload)
         this._connected = false
         this._nextTime = 0
       }
@@ -229,15 +227,15 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
   }
 
   protected _videoFrameRequestCallback = (): void => {
-    this.update()
+    this.requestUpload()
     this._requestId = this.source.requestVideoFrameCallback(this._videoFrameRequestCallback)
   }
 
-  update = (): void => {
-    const elapsed = Math.floor(Ticker.instance.elapsed * this.source.playbackRate)
+  override requestUpload = (): void => {
+    const elapsed = Math.floor(GlobalTicker.elapsed * this.source.playbackRate)
     this._nextTime -= elapsed
     if (!this._spf || this._nextTime <= 0) {
-      super.updateSource()
+      super.requestUpload()
       this._nextTime = this._spf || 0
     }
   }

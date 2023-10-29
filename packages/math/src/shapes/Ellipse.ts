@@ -1,10 +1,17 @@
-export class Ellipse {
+import { PI_2 } from '../utils'
+import { Arc } from './Arc'
+
+export class Ellipse extends Arc {
   constructor(
-    public x = 0,
-    public y = 0,
-    public width = 0,
-    public height = 0,
+    cx = 0,
+    cy = 0,
+    rx = 0,
+    ry = 0,
+    public rotation = 0,
+    startAngle = 0,
+    endAngle = PI_2,
+    counterclockwise = false,
   ) {
-    //
+    super(cx, cy, rx, ry, startAngle, endAngle, counterclockwise)
   }
 }

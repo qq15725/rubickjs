@@ -1,10 +1,9 @@
-import { EventEmitter } from '@rubickjs/shared'
-import { Ticker } from '@rubickjs/core'
+import { EventTarget, GlobalTicker } from '@rubickjs/core'
 import type { IPlayOptions, ISound } from '../interfaces'
 import type { AudioProcessor } from '../pipeline'
 import type { WebAudio } from './WebAudio'
 
-export class WebSound extends EventEmitter implements ISound {
+export class WebSound extends EventTarget implements ISound {
   protected _audio: WebAudio | null = null
   protected _sourceNode: AudioBufferSourceNode | null = null
   protected _gain: GainNode | null = null
@@ -172,7 +171,7 @@ export class WebSound extends EventEmitter implements ISound {
     }
   }
 
-  refresh = (): void => {
+  refresh(): void {
     if (!this._audio || !this._sourceNode) {
       return
     }
@@ -213,7 +212,7 @@ export class WebSound extends EventEmitter implements ISound {
     }
   }
 
-  refreshPaused = (): void => {
+  refreshPaused(): void {
     if (!this._audio) return
 
     const paused = this._paused
@@ -260,9 +259,9 @@ export class WebSound extends EventEmitter implements ISound {
   protected _updateListener = () => this._update()
 
   protected _enableTicker(enabled: boolean): void {
-    Ticker.instance.off('update', this._updateListener)
+    GlobalTicker.off(this._updateListener)
     if (enabled) {
-      Ticker.instance.on('update', this._updateListener)
+      GlobalTicker.on(this._updateListener)
     }
   }
 

@@ -1,7 +1,8 @@
 import { clamp } from '@rubickjs/math'
-import { BaseObject } from './BaseObject'
+import { property } from './decorators'
+import { ReactiveTarget } from './ReactiveTarget'
 import type { SceneTree } from './SceneTree'
-import type { WebGLRenderer } from '@rubickjs/renderer'
+import type { Maskable, WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
 
 export enum InternalMode {
@@ -10,24 +11,72 @@ export enum InternalMode {
   BACK = 2,
 }
 
-export class Node extends BaseObject {
+export type Visibility = 'visible' | 'hidden'
+
+export interface NodeOptions {
+  name?: string
+  visibility?: Visibility
+}
+
+export class Node extends ReactiveTarget {
+  readonly tagName!: string
+
+  @property() name!: string
+  @property() visibility?: Visibility
+  @property() mask?: Maskable
+
+  /** Visibility */
+  visibleStartTime = 0
+  visibleDuration = Number.MAX_SAFE_INTEGER
+
+  /** @internal */
+  _computedVisibility: Visibility = 'visible'
+
   /** @internal */
   _internalMode = InternalMode.DISABLED
 
-  /** Name */
-  protected _name = this.getClass()
-  get name() { return this._name }
-  set name(val) { this.setName(val) }
-  getName() { return this._name }
-  setName(name: string): this {
-    this._name = name
-    this.notification('pathRenamed')
-    return this
-  }
-
-  /** Tree */
   protected _readyed = false
   protected _tree: SceneTree | null = null
+  protected _parent: Node | null = null
+  protected _children: Array<Node> = []
+
+  get visibleEndTime(): number { return this.visibleStartTime + this.visibleDuration }
+  get visibleProgress(): number {
+    return clamp(
+      0,
+      ((this._tree?.timeline.currentTime ?? 0) - this.visibleStartTime)
+      / this.visibleDuration,
+      1,
+    )
+  }
+
+  get siblingIndex(): number { return this.getIndex() }
+  set siblingIndex(toIndex) { this._parent?.moveChild(this, toIndex) }
+  get previousSibling(): Node | undefined { return this._parent?.getChildren()[this.getIndex() - 1] }
+  get nextSibling(): Node | undefined { return this._parent?.getChildren()[this.getIndex() + 1] }
+  get firstSibling(): Node | undefined { return this._parent?.getChildren()[0] }
+  get lastSibling(): Node | undefined {
+    const children = this._parent?.getChildren()
+    return children ? children[children.length - 1] : undefined
+  }
+
+  constructor(options: NodeOptions = {}) {
+    super()
+    this.setProperties(options)
+  }
+
+  /** Meta */
+  protected _meta = new Map<string, unknown>()
+  hasMeta(name: string): boolean { return this._meta.has(name) }
+  getMeta(name: string, defaultVal = null): any { return this._meta.get(name) ?? defaultVal }
+  setMeta(name: string, value: any): void { this._meta.set(name, value) }
+  deleteMeta(name: string): void { this._meta.delete(name) }
+  clearMeta() { this._meta.clear() }
+
+  /** Name */
+  setName(value: string): this { this.name = value; return this }
+
+  /** Tree */
   getTree() { return this._tree }
   getViewport() { return this._tree?.getCurrentViewport() }
   getWindow() { return this._tree?.root }
@@ -68,7 +117,6 @@ export class Node extends BaseObject {
   }
 
   /** Parent */
-  protected _parent: Node | null = null
   getParent(): Node | null { return this._parent }
   /** @internal */
   _setParent(parent: Node | null): this {
@@ -84,7 +132,6 @@ export class Node extends BaseObject {
   }
 
   /** Children */
-  protected _children: Array<Node> = []
   getChildren(includeInternal = false): Array<Node> {
     if (includeInternal) {
       return this._children
@@ -137,51 +184,29 @@ export class Node extends BaseObject {
     }
   }
 
-  get siblingIndex(): number { return this.getIndex() }
-  set siblingIndex(toIndex) { this._parent?.moveChild(this, toIndex) }
-  get previousSibling(): Node | undefined { return this._parent?.getChildren()[this.getIndex() - 1] }
-  get nextSibling(): Node | undefined { return this._parent?.getChildren()[this.getIndex() + 1] }
-  get firstSibling(): Node | undefined { return this._parent?.getChildren()[0] }
-  get lastSibling(): Node | undefined {
-    const children = this._parent?.getChildren()
-    return children ? children[children.length - 1] : undefined
+  isRenderable(): boolean {
+    return (this.constructor as any).renderable && this.isVisible()
   }
 
-  /** Visibility */
-  visible = true
-  visibleStartTime = 0
-  visibleDuration = Number.MAX_SAFE_INTEGER
-  get visibleEndTime(): number { return this.visibleStartTime + this.visibleDuration }
-  get visibleProgress(): number {
-    return clamp(
-      0,
-      ((this._tree?.timeline.currentTime ?? 0) - this.visibleStartTime)
-      / this.visibleDuration,
-      1,
-    )
+  isVisible(): boolean {
+    return this._computedVisibility !== 'hidden'
   }
 
-  hide(): void { this.visible = false }
-  show(): void { this.visible = true }
+  protected _computeVisibility() {
+    let visibility = this.visibility
+      ?? this._parent?._computedVisibility
+      ?? 'visible'
 
-  protected _globalVisible = this.visible
-  isVisible(): boolean { return this._globalVisible }
-
-  updateVisibility() {
-    const tree = this._tree
-    if (!tree) return
-    const currentTime = tree.timeline.currentTime
-    let visible = this.visible
-      && this.getParent()?.isVisible() !== false
-    if (visible) {
-      visible = this.visibleStartTime <= currentTime
-        && currentTime <= this.visibleEndTime
+    const currentTime = this._tree?.timeline.currentTime ?? 0
+    if (
+      visibility !== 'hidden'
+      && (currentTime < this.visibleStartTime || currentTime > this.visibleEndTime)
+    ) {
+      visibility = 'hidden'
     }
-    this._globalVisible = visible
-  }
 
-  protected _renderable = false
-  needsRender(): boolean { return this._renderable && this.isVisible() }
+    this._computedVisibility = visibility
+  }
 
   override notification(what: string) {
     super.notification(what)
@@ -196,26 +221,57 @@ export class Node extends BaseObject {
         this._ready()
         break
       case 'process': {
-        this.updateVisibility()
+        this._computeVisibility()
         const tree = this._tree
-        tree?.renderQueue.push(this, false)
-        this._process(tree?.processDeltaTime ?? 0)
+        tree?.emit('nodeProcessing', this)
+        this._process(tree?.deltaTime ?? 0)
+
+        const isRenderable = this.isRenderable()
+        let oldRenderCall
+        if (tree && isRenderable) {
+          const renderCall = tree.renderStack.push(this)
+          oldRenderCall = tree.renderStack.currentCall
+          tree.renderStack.currentCall = renderCall
+        }
+
+        if (this.mask instanceof Node) {
+          this.mask._setTree(this._tree)
+          this.mask.notification('process')
+        }
+
         for (let len = this._children.length, i = 0; i < len; i++) {
           this._children[i].notification('process')
         }
-        tree?.renderQueue.emitPushed(this)
+
+        if (tree && isRenderable) {
+          tree.renderStack.currentCall = oldRenderCall
+        }
+        tree?.emit('nodeProcessed', this)
         break
       }
       case 'postEnterTree':
       case 'parented':
       case 'unparented':
-      case 'pathRenamed':
         break
     }
   }
 
-  render(renderer: WebGLRenderer): void {
+  render(renderer: WebGLRenderer, next?: () => void): void {
+    const mask = this.mask
+
+    if (mask) {
+      renderer.flush()
+      renderer.mask.push(this, mask)
+    }
+
     this._render(renderer)
+
+    next?.()
+
+    if (mask) {
+      renderer.flush()
+      renderer.mask.pop(this)
+    }
   }
 
   input(event: UIInputEvent): void {
@@ -225,8 +281,8 @@ export class Node extends BaseObject {
     this._input(event)
   }
 
-  getProcessDeltaTime() {
-    return this._tree?.processDeltaTime ?? 0
+  getDeltaTime() {
+    return this._tree?.deltaTime ?? 0
   }
 
   getNode(path: string): Node | undefined {
@@ -287,13 +343,17 @@ export class Node extends BaseObject {
     return this
   }
 
-  printTree(prefix = '') {
-    prefix = `${ prefix ? `${ prefix }/` : '' }${ this.name }`
-    for (let len = this._children.length, i = 0; i < len; i++) {
-      // eslint-disable-next-line no-console
-      console.log(`${ prefix }/${ this._children[i].name }`)
-      this._children[i].printTree(prefix)
+  override toObject(): Record<string, any> {
+    const object: any = {
+      tag: this.tagName,
+      ...super.toObject(),
     }
+
+    if (this._children.length) {
+      object.children = this._children.map(child => child.toObject())
+    }
+
+    return object
   }
 
   protected _enterTree(): void { /** override */ }

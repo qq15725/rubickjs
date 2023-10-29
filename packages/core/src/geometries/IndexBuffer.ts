@@ -1,42 +1,61 @@
 import { Resource } from '../Resource'
-import type { WebGLRenderer } from '@rubickjs/renderer'
+import { property } from '../decorators'
+import type { WebGLBufferOptions, WebGLRenderer } from '@rubickjs/renderer'
+
+export interface IndexBufferOptions {
+  data?: Uint16Array | null
+  dynamic?: boolean
+}
 
 export class IndexBuffer extends Resource {
-  data: Uint16Array | null
-  dynamic: boolean
+  @property() data: Uint16Array | null
+  @property() dynamic: boolean
 
-  constructor(props?: Partial<IndexBuffer>) {
+  needsUpload = false
+
+  constructor(options: IndexBufferOptions = {}) {
     super()
 
-    this.data = props?.data ?? null
-    this.dynamic = props?.dynamic ?? false
+    this.data = options?.data ?? null
+    this.dynamic = options?.dynamic ?? false
   }
 
-  static from(data?: number[] | null, dynamic?: boolean) {
-    return new this({
-      data: data ? new Uint16Array(data) : data,
-      dynamic,
-    })
-  }
-
-  glBufferProps() {
+  /** @internal */
+  _glBufferOptions(): WebGLBufferOptions {
     return {
       target: 'element_array_buffer',
       data: this.data,
       usage: this.dynamic ? 'dynamic_draw' : 'static_draw',
-    } as const
+    }
   }
 
-  glBuffer(renderer: WebGLRenderer): WebGLBuffer {
+  /** @internal */
+  _glBuffer(renderer: WebGLRenderer): WebGLBuffer {
     return renderer.getRelated(this, () => {
-      return renderer.createBuffer(this.glBufferProps())
+      return renderer.buffer.create(this._glBufferOptions())
     })
   }
 
-  upload(renderer: WebGLRenderer) {
-    renderer.updateBuffer(
-      this.glBuffer(renderer),
-      this.glBufferProps(),
-    )
+  protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
+    super._onUpdateProperty(key, value, oldValue)
+
+    switch (key) {
+      case 'data':
+      case 'dynamic':
+        this.needsUpload = true
+        break
+    }
+  }
+
+  upload(renderer: WebGLRenderer): boolean {
+    const result = this.needsUpload
+    if (result) {
+      this.needsUpload = false
+      renderer.buffer.update(
+        this._glBuffer(renderer),
+        this._glBufferOptions(),
+      )
+    }
+    return result
   }
 }

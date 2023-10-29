@@ -1,5 +1,4 @@
 import { colord } from 'colord'
-import { EventEmitter } from '@rubickjs/shared'
 import { clamp } from '@rubickjs/math'
 import type {
   AnyColor,
@@ -17,12 +16,12 @@ export type ColorValue =
 
 const HEX_PATTERN = /^(#|0x)?(([a-f0-9]{3}){1,2}([a-f0-9]{2})?)$/i
 
-export class Color extends EventEmitter {
-  protected _source!: ColorValue
-  get source() { return this._source }
-  set source(val) {
-    if (this._source !== val) {
-      this._source = val
+export class Color {
+  protected _value!: ColorValue
+  get value() { return this._value }
+  set value(val) {
+    if (this._value !== val) {
+      this._value = val
       this._normalize()
     }
   }
@@ -43,9 +42,8 @@ export class Color extends EventEmitter {
   get bgr(): number { return (this.b8 << 16) + (this.g8 << 8) + this.r8 }
   get abgr(): number { return (this.a8 << 24) + this.bgr }
 
-  constructor(source: ColorValue = 0x00000000) {
-    super()
-    this.source = source
+  constructor(value: ColorValue = 0x00000000) {
+    this.value = value
   }
 
   round(steps: number): this {
@@ -61,7 +59,7 @@ export class Color extends EventEmitter {
     let b: number | undefined
     let a: number | undefined
 
-    let value = this._source
+    let value = this._value
 
     if (value === 0) {
       r = g = b = a = 0

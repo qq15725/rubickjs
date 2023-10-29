@@ -1,9 +1,12 @@
-export class Circle {
+import { PI_2 } from '../utils'
+import { Arc } from './Arc'
+
+export class Circle extends Arc {
   constructor(
-    public x = 0,
-    public y = 0,
-    public radius = 0,
+    x = 0,
+    y = 0,
+    radius = 0,
   ) {
-    //
+    super(x, y, radius, radius, 0, PI_2)
   }
 }

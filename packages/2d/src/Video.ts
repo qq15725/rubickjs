@@ -1,61 +1,69 @@
+import { VideoTexture, customNode, property } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
-import { VideoTexture } from '@rubickjs/core'
-import { defineProps } from '@rubickjs/shared'
-import { Sprite } from './Sprite'
-import type { Node2DStyle } from './Node2DStyle'
+import { Transform2D } from '@rubickjs/math'
+import { Element2d } from './element2d'
+import type { Element2dOptions } from './element2d'
 
-export interface Video {
-  src: string
+export interface VideoOptions extends Element2dOptions {
+  src?: string
 }
 
-@defineProps({
-  src: { internal: '_src', onUpdated: '_onUpdateSrc' },
-})
-export class Video extends Sprite<VideoTexture> {
-  protected _srcLoad?: Promise<this>
-  protected _src!: string
+@customNode('video')
+export class Video extends Element2d {
+  @property() src = ''
 
-  constructor(
-    src = '',
-    style?: Partial<Node2DStyle>,
-  ) {
+  protected _src?: VideoTexture
+
+  constructor(options: VideoOptions = {}) {
     super()
-    this.src = src
-    if (style) this.style = style
+    this.setProperties(options)
   }
 
-  protected _onUpdateSrc() {
-    this.load(true)
+  protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
+    super._onUpdateProperty(key, value, oldValue)
+
+    switch (key) {
+      case 'src':
+        this._loadSrc(value)
+        break
+    }
   }
 
-  async load(force = false): Promise<this> {
+  protected async _loadSrc(src: string): Promise<void> {
+    const texture = await Assets.load(src)
+    if (texture instanceof VideoTexture) {
+      this._src = texture
+      if (!this.width || !this.height) {
+        this.width = this._src.width
+        this.height = this._src.height
+      }
+      this._requestRedraw()
+    }
+  }
+
+  protected _drawSrc() {
     const src = this._src
-
-    if (!src) {
-      return this
+    if (src) {
+      this._context.texture = src
+      this._context.textureTransform = new Transform2D().scale(
+        this.width! / src.width,
+        this.height! / src.height,
+      )
     }
-
-    if (force || !this._srcLoad) {
-      this._srcLoad = Assets.load(src).then(texture => {
-        this._srcLoad = undefined
-        if (src === this._src && texture instanceof VideoTexture) {
-          this.texture = texture
-        }
-        return this
-      })
-    }
-
-    return this._srcLoad
   }
 
-  updateVideoCurrentTime(): void {
+  protected override _drawFill() {
+    this._drawSrc()
+    super._drawFill()
+  }
+
+  protected _updateVideoCurrentTime(): void {
     let currentTime = (this._tree?.timeline.currentTime ?? 0) - this.visibleStartTime
+    if (currentTime < 0) return
 
-    if (currentTime < 0) {
-      return
-    }
+    const texture = this._src
+    if (!texture) return
 
-    const texture = this._texture
     const duration = texture.duration
 
     currentTime = duration
@@ -71,7 +79,10 @@ export class Video extends Sprite<VideoTexture> {
   }
 
   protected override _process(delta: number) {
-    this.updateVideoCurrentTime()
+    if (this.isVisible()) {
+      this._updateVideoCurrentTime()
+    }
+
     super._process(delta)
   }
 }

@@ -1,10 +1,9 @@
-import { EventEmitter } from '@rubickjs/shared'
-import { Ticker } from '@rubickjs/core'
+import { EventTarget, GlobalTicker } from '@rubickjs/core'
 import type { AudioProcessor } from '../pipeline'
 import type { IPlayOptions, ISound } from '../interfaces'
 import type { HTMLAudio } from './HTMLAudio'
 
-export class HTMLSound extends EventEmitter implements ISound {
+export class HTMLSound extends EventTarget implements ISound {
   static readonly PADDING = 0.1
   protected _source: HTMLAudioElement | null = null
   protected _audio: HTMLAudio | null = null
@@ -203,7 +202,7 @@ export class HTMLSound extends EventEmitter implements ISound {
         this._source.currentTime = start
         this._source.onloadedmetadata = null
         this.emit('progress', start, this._duration)
-        Ticker.instance.on('update', this._onUpdate)
+        GlobalTicker.on(this._onUpdate)
       }
     }
     this._source.onended = this._onComplete.bind(this)
@@ -220,14 +219,14 @@ export class HTMLSound extends EventEmitter implements ISound {
   }
 
   protected _onComplete(): void {
-    Ticker.instance.off('update', this._onUpdate)
+    GlobalTicker.off(this._onUpdate)
     this._stop()
     this.emit('progress', 1, this._duration)
     this.emit('end', this)
   }
 
   destroy(): void {
-    Ticker.instance.off('update', this._onUpdate)
+    GlobalTicker.off(this._onUpdate)
     this.removeAllListeners()
 
     const source = this._source

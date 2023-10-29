@@ -1,50 +1,41 @@
 import { Resource } from '../Resource'
 import type { WebGLDrawMode, WebGLRenderer } from '@rubickjs/renderer'
-import type { Attribute } from './Attribute'
+import type { VertexAttribute } from './VertexAttribute'
 import type { IndexBuffer } from './IndexBuffer'
 import type { Material } from '../materials/Material'
-import type { AttributeBuffer } from './AttributeBuffer'
+import type { VertexBuffer } from './VertexBuffer'
+
+export interface GeometryOptions {
+  vertexAttributes?: Record<string, VertexAttribute>
+  indexBuffer?: IndexBuffer
+  instanceCount?: number
+  mode?: WebGLDrawMode
+}
 
 export class Geometry extends Resource {
-  /**
-   * Vertex attributes
-   */
-  readonly attributes: Map<string, Attribute>
-
-  /**
-   * Index buffer
-   */
+  vertexAttributes: Map<string, VertexAttribute>
   indexBuffer?: IndexBuffer
-
-  /**
-   * Instance count
-   *
-   * @see instancedArrays
-   */
   instanceCount?: number
-
-  /**
-   * Draw mode
-   */
   mode: WebGLDrawMode
 
-  protected materials = new WeakMap<Material, Record<string, any>>()
+  protected _materialWeakMap = new WeakMap<Material, Record<string, any>>()
 
-  constructor(propsData?: Partial<Geometry>) {
+  constructor(options: GeometryOptions = {}) {
     super()
 
-    this.attributes = propsData?.attributes ?? new Map()
-    this.indexBuffer = propsData?.indexBuffer
-    this.instanceCount = propsData?.instanceCount
-    this.mode = propsData?.mode ?? 'triangles'
+    this.vertexAttributes = new Map(Object.entries(options?.vertexAttributes ?? {}))
+    this.indexBuffer = options?.indexBuffer
+    this.instanceCount = options?.instanceCount
+    this.mode = options?.mode ?? 'triangles'
   }
 
-  glVertexArray(renderer: WebGLRenderer) {
+  /** @internal */
+  _glVertexArray(renderer: WebGLRenderer) {
     return {
       attributes: Object.fromEntries(
-        Array.from(this.attributes).map(([key, attrib]) => {
+        Array.from(this.vertexAttributes).map(([key, attrib]) => {
           return [key, {
-            buffer: attrib.buffer.glBuffer(renderer),
+            buffer: attrib.buffer._glBuffer(renderer),
             size: attrib.size,
             type: attrib.type,
             normalized: attrib.normalized,
@@ -54,19 +45,24 @@ export class Geometry extends Resource {
           }]
         }),
       ),
-      elementArrayBuffer: this.indexBuffer?.glBuffer(renderer),
+      elementArrayBuffer: this.indexBuffer?._glBuffer(renderer),
     }
   }
 
-  protected glVertexArrayObject(renderer: WebGLRenderer, material: Material): WebGLVertexArrayObject | null {
-    let flag = this.materials.get(material)
-    if (!flag) {
-      this.materials.set(material, flag = { material: material.getInstanceId(), geometry: this.getInstanceId() })
+  /** @internal */
+  _glVertexArrayObject(renderer: WebGLRenderer, material: Material): WebGLVertexArrayObject | null {
+    let obj = this._materialWeakMap.get(material)
+    if (!obj) {
+      obj = {
+        material: material.instanceId,
+        geometry: this.instanceId,
+      }
+      this._materialWeakMap.set(material, obj)
     }
-    return renderer.getRelated(flag, () => {
-      return renderer.createVertexArray(
-        material.glProgram(renderer),
-        this.glVertexArray(renderer),
+    return renderer.getRelated(obj, () => {
+      return renderer.vertexArray.create(
+        material._glProgram(renderer),
+        this._glVertexArray(renderer),
       )
     })
   }
@@ -74,30 +70,35 @@ export class Geometry extends Resource {
   draw(renderer: WebGLRenderer, material: Material, uniforms?: Record<string, any>): void {
     renderer.flush()
     material.activate(renderer, uniforms)
-    const vao = this.glVertexArrayObject(renderer, material)
-    renderer.activeVertexArray(vao ?? this.glVertexArray(renderer))
 
-    if (this.hasDirty('buffers')) {
-      this.deleteDirty('buffers')
-      let buffer: AttributeBuffer | undefined
-      this.attributes.forEach(attribute => {
-        if (buffer?.getInstanceId() !== attribute.buffer.getInstanceId()) {
-          buffer = attribute.buffer
-          buffer.upload(renderer)
+    const vao = this._glVertexArrayObject(renderer, material)
+
+    renderer.vertexArray.bind(vao ?? this._glVertexArray(renderer))
+
+    let updateVertexArray = false
+    let buffer: VertexBuffer | undefined
+    this.vertexAttributes.forEach(attribute => {
+      if (buffer?.instanceId !== attribute.buffer.instanceId) {
+        buffer = attribute.buffer
+        if (buffer.upload(renderer)) {
+          updateVertexArray = true
         }
-      })
-      this.indexBuffer?.upload(renderer)
+      }
+      if (attribute.upload()) {
+        updateVertexArray = true
+      }
+    })
+
+    if (this.indexBuffer?.upload(renderer)) {
+      updateVertexArray = true
     }
 
-    if (this.hasDirty('vertexArray')) {
-      this.deleteDirty('vertexArray')
-      if (vao) {
-        renderer.updateVertexArray(
-          material.glProgram(renderer)!,
-          vao,
-          this.glVertexArray(renderer),
-        )
-      }
+    if (updateVertexArray && vao) {
+      renderer.vertexArray.update(
+        material._glProgram(renderer),
+        vao,
+        this._glVertexArray(renderer),
+      )
     }
 
     renderer.draw({

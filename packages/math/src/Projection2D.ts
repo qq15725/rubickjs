@@ -1,38 +1,55 @@
 import { Matrix3 } from './Matrix3'
-import { Vector2 } from './Vector2'
 
 export class Projection2D extends Matrix3 {
-  /**
-   * x and y
-   */
-  readonly position: Vector2
-
-  /**
-   * width and height
-   */
-  readonly size: Vector2
-
   constructor(
-    x = 0,
-    y = 0,
-    width = 0,
-    height = 0,
-    public flipY = false,
+    protected _x = 0,
+    protected _y = 0,
+    protected _width = 0,
+    protected _height = 0,
+    protected _flipY = false,
   ) {
     super()
-    this.position = new Vector2(x, y).onUpdate(this._onUpdate.bind(this))
-    this.size = new Vector2(width, height).onUpdate(this._onUpdate.bind(this))
+    this._performUpdateArray()
   }
 
-  protected _onUpdate() {
-    const { x, y } = this.position
-    const { x: width, y: height } = this.size
+  flipY(flipY: boolean): this {
+    if (this._flipY !== flipY) {
+      this._flipY = flipY
+      this._performUpdateArray()
+    }
+    return this
+  }
+
+  translate(x: number, y: number): this {
+    if (this._x !== x || this._y !== y) {
+      this._x = x
+      this._y = y
+      this._performUpdateArray()
+    }
+    return this
+  }
+
+  resize(width: number, height: number): this {
+    if (this._width !== width || this._height !== height) {
+      this._width = width
+      this._height = height
+      this._performUpdateArray()
+    }
+    return this
+  }
+
+  protected _performUpdateArray() {
+    const width = this._width
+    const height = this._height
 
     if (!width || !height) {
       return
     }
 
-    const sign = !this.flipY ? 1 : -1
+    const x = this._x
+    const y = this._y
+
+    const sign = !this._flipY ? 1 : -1
     const a = 1 / width * 2
     const d = sign * (1 / height * 2)
     const tx = -1 - (x * a)

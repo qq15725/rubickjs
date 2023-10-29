@@ -1,9 +1,10 @@
-import { Node } from '@rubickjs/core'
+import { Node, customNode } from '@rubickjs/core'
 import { SUPPORTS_WEB_AUDIO } from '@rubickjs/shared'
 import { WebAudio } from './web'
 import { HTMLAudio } from './html'
 import type { IAudio, IPlayOptions, ISound } from './interfaces'
 
+@customNode('audio')
 export class Audio extends Node {
   protected static _soundPool: Array<ISound> = []
 
@@ -17,7 +18,7 @@ export class Audio extends Node {
   get platformAudio() { return this._platformAudio }
 
   /** Src */
-  protected _src = ''
+  protected _src!: string
   get src() { return this._src }
   set src(val) {
     if (this._src !== val) {
@@ -90,9 +91,7 @@ export class Audio extends Node {
   start = 0
   end = 0
 
-  constructor(
-    src: string,
-  ) {
+  constructor(src = '') {
     super()
     this.src = src
   }

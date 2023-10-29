@@ -58,8 +58,8 @@ export class ColorMatrix extends Matrix {
   }
 
   invert(amount = 1): this {
-    const v = -clamp(0, amount, 1)
-    const o = -v * 255
+    const v = lerp(1, -1, amount)
+    const o = lerp(0, 255, amount)
     return this.multiply([
       v, 0, 0, 0, o,
       0, v, 0, 0, o,
@@ -105,50 +105,47 @@ export class ColorMatrix extends Matrix {
 
   override multiply(target: ArrayLike<number>) {
     const b = target
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const a = [...this]
-
-    // Red Channel
-    this[0] = (a[0] * b[0]) + (a[1] * b[5]) + (a[2] * b[10]) + (a[3] * b[15])
-    this[1] = (a[0] * b[1]) + (a[1] * b[6]) + (a[2] * b[11]) + (a[3] * b[16])
-    this[2] = (a[0] * b[2]) + (a[1] * b[7]) + (a[2] * b[12]) + (a[3] * b[17])
-    this[3] = (a[0] * b[3]) + (a[1] * b[8]) + (a[2] * b[13]) + (a[3] * b[18])
-    this[4] = ((a[0] * b[4]) + (a[1] * b[9]) + (a[2] * b[14]) + (a[3] * b[19]) + a[4]) / 255
-
-    // Green Channel
-    this[5] = (a[5] * b[0]) + (a[6] * b[5]) + (a[7] * b[10]) + (a[8] * b[15])
-    this[6] = (a[5] * b[1]) + (a[6] * b[6]) + (a[7] * b[11]) + (a[8] * b[16])
-    this[7] = (a[5] * b[2]) + (a[6] * b[7]) + (a[7] * b[12]) + (a[8] * b[17])
-    this[8] = (a[5] * b[3]) + (a[6] * b[8]) + (a[7] * b[13]) + (a[8] * b[18])
-    this[9] = ((a[5] * b[4]) + (a[6] * b[9]) + (a[7] * b[14]) + (a[8] * b[19]) + a[9]) / 255
-
-    // Blue Channel
-    this[10] = (a[10] * b[0]) + (a[11] * b[5]) + (a[12] * b[10]) + (a[13] * b[15])
-    this[11] = (a[10] * b[1]) + (a[11] * b[6]) + (a[12] * b[11]) + (a[13] * b[16])
-    this[12] = (a[10] * b[2]) + (a[11] * b[7]) + (a[12] * b[12]) + (a[13] * b[17])
-    this[13] = (a[10] * b[3]) + (a[11] * b[8]) + (a[12] * b[13]) + (a[13] * b[18])
-    this[14] = ((a[10] * b[4]) + (a[11] * b[9]) + (a[12] * b[14]) + (a[13] * b[19]) + a[14]) / 255
-
-    // Alpha Channel
-    this[15] = (a[15] * b[0]) + (a[16] * b[5]) + (a[17] * b[10]) + (a[18] * b[15])
-    this[16] = (a[15] * b[1]) + (a[16] * b[6]) + (a[17] * b[11]) + (a[18] * b[16])
-    this[17] = (a[15] * b[2]) + (a[16] * b[7]) + (a[17] * b[12]) + (a[18] * b[17])
-    this[18] = (a[15] * b[3]) + (a[16] * b[8]) + (a[17] * b[13]) + (a[18] * b[18])
-    this[19] = ((a[15] * b[4]) + (a[16] * b[9]) + (a[17] * b[14]) + (a[18] * b[19]) + a[19]) / 255
-
-    return this
+    const a = this._array
+    return this.set([
+      // Red Channel
+      (a[0] * b[0]) + (a[1] * b[5]) + (a[2] * b[10]) + (a[3] * b[15]),
+      (a[0] * b[1]) + (a[1] * b[6]) + (a[2] * b[11]) + (a[3] * b[16]),
+      (a[0] * b[2]) + (a[1] * b[7]) + (a[2] * b[12]) + (a[3] * b[17]),
+      (a[0] * b[3]) + (a[1] * b[8]) + (a[2] * b[13]) + (a[3] * b[18]),
+      (a[0] * b[4]) + (a[1] * b[9]) + (a[2] * b[14]) + (a[3] * b[19]) + a[4],
+      // Green Channel
+      (a[5] * b[0]) + (a[6] * b[5]) + (a[7] * b[10]) + (a[8] * b[15]),
+      (a[5] * b[1]) + (a[6] * b[6]) + (a[7] * b[11]) + (a[8] * b[16]),
+      (a[5] * b[2]) + (a[6] * b[7]) + (a[7] * b[12]) + (a[8] * b[17]),
+      (a[5] * b[3]) + (a[6] * b[8]) + (a[7] * b[13]) + (a[8] * b[18]),
+      (a[5] * b[4]) + (a[6] * b[9]) + (a[7] * b[14]) + (a[8] * b[19]) + a[9],
+      // Blue Channel
+      (a[10] * b[0]) + (a[11] * b[5]) + (a[12] * b[10]) + (a[13] * b[15]),
+      (a[10] * b[1]) + (a[11] * b[6]) + (a[12] * b[11]) + (a[13] * b[16]),
+      (a[10] * b[2]) + (a[11] * b[7]) + (a[12] * b[12]) + (a[13] * b[17]),
+      (a[10] * b[3]) + (a[11] * b[8]) + (a[12] * b[13]) + (a[13] * b[18]),
+      (a[10] * b[4]) + (a[11] * b[9]) + (a[12] * b[14]) + (a[13] * b[19]) + a[14],
+      // Alpha Channel
+      (a[15] * b[0]) + (a[16] * b[5]) + (a[17] * b[10]) + (a[18] * b[15]),
+      (a[15] * b[1]) + (a[16] * b[6]) + (a[17] * b[11]) + (a[18] * b[16]),
+      (a[15] * b[2]) + (a[16] * b[7]) + (a[17] * b[12]) + (a[18] * b[17]),
+      (a[15] * b[3]) + (a[16] * b[8]) + (a[17] * b[13]) + (a[18] * b[18]),
+      (a[15] * b[4]) + (a[16] * b[9]) + (a[17] * b[14]) + (a[18] * b[19]) + a[19],
+    ])
   }
 
   toMatrix4(): Matrix4 {
+    const array = this._array
     return new Matrix4([
-      this[0], this[1], this[2], this[3],
-      this[5], this[6], this[7], this[8],
-      this[10], this[11], this[12], this[13],
-      this[15], this[16], this[17], this[18],
+      array[0], array[1], array[2], array[3],
+      array[5], array[6], array[7], array[8],
+      array[10], array[11], array[12], array[13],
+      array[15], array[16], array[17], array[18],
     ])
   }
 
   toVector4(): Vector4 {
-    return new Vector4(this[4], this[9], this[14], this[19])
+    const array = this._array
+    return new Vector4(array[4] / 255, array[9] / 255, array[14] / 255, array[19] / 255)
   }
 }

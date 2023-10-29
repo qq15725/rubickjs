@@ -13,12 +13,12 @@ export class PixelsTexture extends Texture<TexturePixelsSource> {
       pixels: null as null | Uint8Array,
     }
 
-    if (!pixels) {
-      //
-    } else if (ArrayBuffer.isView(pixels)) {
-      source.pixels = new Uint8Array(pixels.buffer)
-    } else {
-      source.pixels = new Uint8Array(pixels)
+    if (pixels) {
+      if (ArrayBuffer.isView(pixels)) {
+        source.pixels = new Uint8Array(pixels.buffer)
+      } else {
+        source.pixels = new Uint8Array(pixels)
+      }
     }
 
     super(source)

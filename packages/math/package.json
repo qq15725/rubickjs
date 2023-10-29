@@ -42,5 +42,11 @@
   "types": "dist/index.d.ts",
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@rubickjs/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "@rubickjs/shared": "workspace:*"
   }
 }

@@ -1,4 +1,4 @@
-import { SUPPORTS_CREATE_IMAGE_BITMAP, crossOrigin } from '@rubickjs/shared'
+import { IN_BROWSER, SUPPORTS_CREATE_IMAGE_BITMAP, crossOrigin } from '@rubickjs/shared'
 import { Texture } from './Texture'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 
@@ -13,7 +13,7 @@ function resolveOptions(options?: ImageTextureOptions): Required<ImageTextureOpt
   return {
     autoLoad: Boolean(options?.autoLoad ?? true),
     useBitmap: Boolean(options?.useBitmap ?? true) && SUPPORTS_CREATE_IMAGE_BITMAP,
-    crossorigin: Boolean(options?.crossorigin ?? null),
+    crossorigin: options?.crossorigin ?? null,
   }
 }
 
@@ -67,7 +67,7 @@ export class ImageTexture extends Texture<HTMLImageElement> {
 
         const onLoad = () => {
           onResolve()
-          this.updateSource()
+          this.requestUpload()
           if (this.useBitmap) {
             this.genBitmap().finally(() => resolve(this))
           } else {
@@ -121,7 +121,7 @@ export class ImageTexture extends Texture<HTMLImageElement> {
       })
       .then(bitmap => {
         this.bitmap = bitmap
-        this.updateSource()
+        this.requestUpload()
         this._loadBitmap = undefined
         return this
       })
@@ -133,22 +133,37 @@ export class ImageTexture extends Texture<HTMLImageElement> {
     return this._loadBitmap
   }
 
-  protected override _getSouce() {
-    return this.bitmap ?? this.source
+  /** @internal */
+  override _glTextureOptions(renderer: WebGLRenderer) {
+    return {
+      ...super._glTextureOptions(renderer),
+      source: this.bitmap ?? this.source,
+    }
   }
 
-  override upload(renderer: WebGLRenderer) {
-    if (this.useBitmap && !this.bitmap) {
-      this.genBitmap()
-      return
+  override upload(renderer: WebGLRenderer): boolean {
+    if (this.useBitmap) {
+      if (!this.bitmap) {
+        this.genBitmap()
+        return false
+      }
+    } else {
+      const source = this.source
+      if (IN_BROWSER && source instanceof HTMLImageElement) {
+        if (!source.complete || source.naturalWidth === 0) {
+          return false
+        }
+      }
     }
 
-    super.upload(renderer)
+    const result = super.upload(renderer)
 
     // TODO
     if (this.preserveBitmap && this.bitmap) {
       this.bitmap.close()
       this.bitmap = undefined
     }
+
+    return result
   }
 }

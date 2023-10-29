@@ -1,5 +1,4 @@
 export * from './css'
-export * from './decorators'
 export * from './dom'
 export * from './EventEmitter'
 export * from './utils'

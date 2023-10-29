@@ -1,91 +1,112 @@
+import { EventEmitter } from '@rubickjs/shared'
 import { Matrix } from './Matrix'
 
-interface NumberArray {
-  readonly length: number
-  [n: number]: number
-}
+export type VectorTarget = number | ArrayLike<number> | Matrix
+export type VectorOutput = Array<number> | Vector
 
-export type VectorTarget = number | NumberArray | Matrix
-export type VectorOutput = NumberArray
+export abstract class Vector extends EventEmitter {
+  protected _array: Array<number> = []
 
-export abstract class Vector extends Float64Array {
-  protected _onUpdateCallback?: (...args: Array<number>) => void
+  get length(): number { return this.dim }
 
   constructor(
     readonly dim: number,
   ) {
-    super(dim)
-  }
-
-  onUpdate(callback: (...args: Array<number>) => void): this {
-    this._onUpdateCallback = callback
-    return this
+    super()
   }
 
   protected _operate(
     operator: string,
-    value: VectorTarget,
+    target: VectorTarget,
     output?: VectorOutput,
   ): any {
-    const { dim } = this
-    const result = output ?? this
-    const target = typeof value === 'number'
-      ? Array.from({ length: dim }, () => value)
-      : value
+    const { dim: length, _array: array } = this
+
+    let targetArray
+    if (typeof target === 'number') {
+      targetArray = Array.from({ length }, () => target)
+    } else if (target instanceof Matrix) {
+      targetArray = target.toArray()
+    } else {
+      targetArray = target
+    }
+
+    let outputObject: Vector | undefined
+    let outputArray: Array<number> = []
+    if (!output) {
+      outputObject = this as any
+    } else if (output instanceof Vector) {
+      outputObject = output
+    } else {
+      outputArray = output
+    }
 
     if (target instanceof Matrix) {
-      if (operator === '*') {
-        for (let x = 0; x < dim; x++) {
-          let val = 0
-          for (let y = 0; y < dim; y++) {
-            val += this[x] * target[y * target.cols + x]
+      const { cols } = target
+      switch (operator) {
+        case '*':
+          for (let x = 0; x < length; x++) {
+            let val = 0
+            for (let y = 0; y < length; y++) {
+              val += array[x] * targetArray[y * cols + x]
+            }
+            outputArray[x] = val
           }
-          result[x] = val
-        }
-      } else {
-        throw new Error(`Not support operator in '${ this.toName() } ${ operator } ${ target.toName() }'`)
+          break
+        default:
+          throw new Error(`Not support operator in '${ this.toName() } ${ operator } ${ target.toName() }'`)
       }
     } else {
-      if (operator === '+') {
-        for (let i = 0; i < dim; i++) {
-          result[i] = this[i] + target[i]
+      switch (operator) {
+        case '+':
+          for (let i = 0; i < length; i++) {
+            outputArray[i] = array[i] + targetArray[i]
+          }
+          break
+        case '-':
+          for (let i = 0; i < length; i++) {
+            outputArray[i] = array[i] - targetArray[i]
+          }
+          break
+        case '*':
+          for (let i = 0; i < length; i++) {
+            outputArray[i] = array[i] * targetArray[i]
+          }
+          break
+        case '/':
+          for (let i = 0; i < length; i++) {
+            outputArray[i] = array[i] / targetArray[i]
+          }
+          break
+        case 'rot': {
+          const c = Math.cos(targetArray[0])
+          const s = Math.sin(targetArray[0])
+          outputArray[0] = array[0] * c - array[1] * s
+          outputArray[1] = array[1] * c + array[0] * s
+          break
         }
-      } else if (operator === '-') {
-        for (let i = 0; i < dim; i++) {
-          result[i] = this[i] - target[i]
+        case '==': {
+          let flag = true
+          for (let i = 0; i < length; i++) {
+            flag = flag && array[i] === targetArray[i]
+          }
+          return flag
         }
-      } else if (operator === '*') {
-        for (let i = 0; i < dim; i++) {
-          result[i] = this[i] * target[i]
-        }
-      } else if (operator === '/') {
-        for (let i = 0; i < dim; i++) {
-          result[i] = this[i] / target[i]
-        }
-      } else if (operator === '=') {
-        for (let i = 0; i < dim; i++) {
-          this[i] = target[i]
-        }
-        return this
-      } else if (operator === 'rot') {
-        const c = Math.cos(target[0])
-        const s = Math.sin(target[0])
-        result[0] = this[0] * c - this[1] * s
-        result[1] = this[1] * c + this[0] * s
-      } else if (operator === '==') {
-        let flag = true
-        for (let i = 0; i < dim; i++) {
-          flag = flag && this[i] === target[i]
-        }
-        return flag
-      } else {
-        throw new Error(`Not support operator in '${ this.toName() } ${ operator } Vector'`)
+        case '=':
+          for (let i = 0; i < length; i++) {
+            const val = targetArray[i]
+            if (val !== undefined) {
+              array[i] = val
+            }
+          }
+          this._emitUpdate(array)
+          return this
+        default:
+          throw new Error(`Not support operator in '${ this.toName() } ${ operator } Vector'`)
       }
     }
 
-    this._onUpdateCallback?.(...Array.from(result))
-
-    return result
+    return outputObject?.set(outputArray) ?? outputArray
   }
 
   add(value: VectorTarget): this
@@ -108,21 +129,38 @@ export abstract class Vector extends Float64Array {
   rotate<T extends VectorOutput>(angle: number, output: T): T
   rotate(angle: any): any { return this._operate('rot', angle) }
 
-  copy(value: VectorTarget): this { return this._operate('=', value) }
+  set(value: VectorTarget): this { return this._operate('=', value) }
 
   equals(value: VectorTarget): boolean { return this._operate('==', value) }
 
-  toName(): string {
-    return `Vector${ this.dim }`
-  }
-
   clone(): this {
-    const cloned = new (this.constructor as any)()
+    const cloned: this = new (this.constructor as any)()
     cloned.set(this.toArray())
     return cloned
   }
 
+  onUpdate(callback: (array: Array<number>) => void): this {
+    this.on('update', callback)
+    return this
+  }
+
+  offUpdate(callback: (array: Array<number>) => void): this {
+    this.off('update', callback)
+    return this
+  }
+
+  protected _emitUpdate(array: Array<number>): void {
+    this._onUpdate(array)
+    this.emit('update', array)
+  }
+
+  protected _onUpdate(_array: Array<number>): void { /** override */ }
+
   toArray(): Array<number> {
-    return [...this]
+    return this._array.slice()
+  }
+
+  toName(): string {
+    return `Vector${ this.dim }`
   }
 }

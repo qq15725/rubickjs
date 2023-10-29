@@ -1,107 +1,80 @@
-import { Sprite } from '@rubickjs/2d'
+import { Element2d } from '@rubickjs/2d'
 import { IN_BROWSER } from '@rubickjs/shared'
-import { Texture } from '@rubickjs/core'
+import { Texture, customNode, property } from '@rubickjs/core'
+import { Transform2D } from '@rubickjs/math'
 import { WebAudioContext } from './web'
+import type { Element2dOptions } from '@rubickjs/2d'
 
-export interface AudioWaveformStyle {
+export interface AudioWaveformOptions extends Element2dOptions {
+  src?: string
   gap?: number
   color?: string
 }
 
-export class AudioWaveform extends Sprite<Texture<HTMLCanvasElement>> {
+@customNode('audioWaveform')
+export class AudioWaveform extends Element2d {
+  @property() src?: string
+  @property() gap = 0
+  @property() color = '#000000'
+
   protected _audioBuffer?: AudioBuffer
-  protected _srcLoad?: Promise<this>
-  protected _src = ''
-  get src() { return this._src }
-  set src(val) {
-    if (this._src !== val) {
-      this._src = val
-      this.load(true)
+  protected _src = IN_BROWSER
+    ? new Texture(document.createElement('canvas'))
+    : undefined
+
+  protected _needsUpdateTexture = false
+
+  constructor(options: AudioWaveformOptions = {}) {
+    super()
+    this.setProperties(options)
+  }
+
+  protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
+    super._onUpdateProperty(key, value, oldValue)
+
+    switch (key) {
+      case 'src':
+        this._loadSrc(value)
+        break
+      case 'gap':
+      case 'color':
+      case 'width':
+      case 'height':
+        this._needsUpdateTexture = true
+        break
     }
   }
 
-  protected _gap: number
-  get gap() { return this._gap }
-  set gap(val) {
-    if (this._gap !== val) {
-      this._gap = val
-      this.scheduleUpdateTexture()
-    }
+  async _loadSrc(src: string): Promise<void> {
+    await globalThis.fetch(src)
+      .then(rep => rep.arrayBuffer())
+      .then(buffer => WebAudioContext.decode(buffer))
+      .then(buffer => {
+        this._audioBuffer = buffer
+        this.syncTexture(true)
+      })
   }
 
-  protected _color: string
-  get color() { return this._color }
-  set color(val) {
-    if (this._color !== val) {
-      this._color = val
-      this.scheduleUpdateTexture()
-    }
-  }
-
-  constructor(
-    src: string,
-    style: AudioWaveformStyle = {},
-  ) {
-    super(
-      IN_BROWSER
-        ? new Texture(document.createElement('canvas'))
-        : undefined,
-    )
-    this.src = src
-    this._gap = style.gap ?? 0
-    this._color = style.color ?? 'black'
-    this.scheduleUpdateTexture()
-  }
-
-  async load(force = false): Promise<this> {
-    const src = this._src
-
-    if (!src) {
-      return this
-    }
-
-    if (force || !this._srcLoad) {
-      this._srcLoad = globalThis.fetch(src)
-        .then(rep => rep.arrayBuffer())
-        .then(buffer => WebAudioContext.decode(buffer))
-        .then(buffer => {
-          if (src === this._src) {
-            this._audioBuffer = buffer
-            this.scheduleUpdateTexture()
-          }
-          return this
-        })
-    }
-
-    return this._srcLoad
-  }
-
-  scheduleUpdateTexture() { this.addDirty('texture') }
-
-  protected _onUpdateSize() {
-    super._onUpdateSize()
-    this.scheduleUpdateTexture()
-  }
-
-  updateTexture(): void {
+  syncTexture(force = false): void {
     const audioBuffer = this._audioBuffer
     if (!audioBuffer) return
 
-    if (!this.hasDirty('texture')) return
-    this.deleteDirty('texture')
+    if (!force && !this._needsUpdateTexture) return
+    this._needsUpdateTexture = false
 
-    const canvas = this._texture.source
-    const [width, height] = this.size
+    const canvas = this._src?.source
+    if (!canvas) return
+    const { width = 0, height = 0 } = this
     canvas.width = width
     canvas.height = height
 
     const context = canvas.getContext('2d')
     if (!context) {
-      console.warn('Failed to getContext(\'2d\') in updateTexture')
+      console.warn('Failed to getContext(\'2d\') in syncTexture')
       return
     }
 
-    context.fillStyle = this._color
+    context.fillStyle = this.color
     const data = audioBuffer.getChannelData(0)
     const step = Math.ceil(data.length / width)
     const amp = height / 2
@@ -117,10 +90,10 @@ export class AudioWaveform extends Sprite<Texture<HTMLCanvasElement>> {
         }
       }
 
-      if (!this._gap || (i % (this._gap * 2) === 0)) {
+      if (!this.gap || (i % (this.gap * 2) === 0)) {
         const x = i
         const y = (1 + min) * amp
-        const w = this._gap || 1
+        const w = this.gap || 1
         const h = Math.max(1, (max - min) * amp)
         context.fillRect(x, y, w, h)
         min = 1
@@ -128,11 +101,28 @@ export class AudioWaveform extends Sprite<Texture<HTMLCanvasElement>> {
       }
     }
 
-    this.texture.updateSource()
+    this._src?.requestUpload()
+    this._requestRedraw()
   }
 
   protected override _process(delta: number) {
-    this.updateTexture()
+    this.syncTexture()
     super._process(delta)
+  }
+
+  protected _drawSrc() {
+    const src = this._src
+    if (src?.valid) {
+      this._context.texture = src
+      this._context.textureTransform = new Transform2D().scale(
+        this.width! / src.width,
+        this.height! / src.height,
+      )
+    }
+  }
+
+  protected override _drawFill() {
+    this._drawSrc()
+    super._drawFill()
   }
 }

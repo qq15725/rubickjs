@@ -1,5 +1,5 @@
-const PI = Math.PI
-const PI_2 = PI * 2
+import { PI_2 } from './utils'
+
 const FUNCTIONS_RE = /([\w-]+)\((.+?)\)/g
 const ARGS_RE = /([^,]+)/g
 const ARG_RE = /([-\d.]+)(.*)/

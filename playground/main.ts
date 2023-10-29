@@ -1,4 +1,4 @@
-import { Animation, Effect, Engine, Image, Node2D, Text } from 'rubickjs'
+import { Animation, Effect, Engine, Image, Node2d, Text } from 'rubickjs'
 
 const engine = new Engine()
 
@@ -9,16 +9,17 @@ view.style.height = '100vh'
 document.body.append(view)
 
 // text
-const text = new Text([
-  {
-    fragments: [
-      { text: 'He', style: { color: 'red', fontSize: 12 } },
-      { text: 'llo', style: { color: 'black' } },
-    ],
-  },
-  { text: ', ', style: { color: 'grey' } },
-  { text: 'World!', style: { color: 'black' } },
-], {
+const text = new Text({
+  text: [
+    {
+      fragments: [
+        { text: 'He', style: { color: 'red', fontSize: 12 } },
+        { text: 'llo', style: { color: 'black' } },
+      ],
+    },
+    { text: ', ', style: { color: 'grey' } },
+    { text: 'World!', style: { color: 'black' } },
+  ],
   left: 100,
   top: 100,
   width: 100,
@@ -29,21 +30,23 @@ const text = new Text([
 })
 
 engine.root.addChild(text)
-engine.root.addChild(new Text('Text12312211221'))
+engine.root.addChild(new Text({ text: 'Text12312211221' }))
 
 // sprite
-const bunny = new Image('https://pixijs.com/assets/bunny.png', {
+const bunny = new Image({
+  src: 'https://pixijs.com/assets/bunny.png',
   backgroundColor: '#0000FF',
 })
 engine.root.addChild(bunny)
 
 // group
-const group = new Node2D({
+const group = new Node2d({
   left: 200,
   top: 100,
 })
 for (let i = 0; i < 5; i++) {
-  const item = new Image('https://pixijs.com/assets/bunny.png', {
+  const item = new Image({
+    src: 'https://pixijs.com/assets/bunny.png',
     backgroundColor: '#00FF0011',
   })
   item.x = i * 10
@@ -79,8 +82,8 @@ engine.root.addChild(group)
 engine.timeline.on('update', (_, delta) => {
   bunny.x = engine.width / 2 - bunny.width / 2
   bunny.y = engine.height / 2 - bunny.height / 2
-  bunny.rotation += 0.001 * delta
-  group.rotation += 0.001 * delta
+  bunny.rotate += 0.01 * delta
+  group.rotate += 0.01 * delta
 })
 
 engine.start()

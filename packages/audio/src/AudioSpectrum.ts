@@ -1,5 +1,5 @@
-import { Sprite } from '@rubickjs/2d'
+import { Element2d } from '@rubickjs/2d'
 
-export class AudioSpectrum extends Sprite {
+export class AudioSpectrum extends Element2d {
   //
 }

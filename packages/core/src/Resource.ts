@@ -1,5 +1,5 @@
-import { BaseObject } from './BaseObject'
+import { ReactiveTarget } from './ReactiveTarget'
 
-export class Resource extends BaseObject {
+export class Resource extends ReactiveTarget {
   //
 }

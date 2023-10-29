@@ -1,211 +1,166 @@
 import { Matrix3 } from './Matrix3'
-import { Vector2 } from './Vector2'
 import { PI_2 } from './utils'
 
 /**
- * Transform2D
+ * Transform
  *
  * | a | c | tx|
  * | b | d | ty|
  * | 0 | 0 | 1 |
  */
 export class Transform2D extends Matrix3 {
-  /**
-   * A default (identity) matrix
-   *
-   * @readonly
-   */
-  static get IDENTITY(): Transform2D { return new Transform2D() }
-
-  /**
-   * Dirty data needs to be updated
-   */
-  protected _dirtyId = 0
-  dirtyId = this._dirtyId
-
-  /**
-   * Transform's rotation (in radians)
-   */
-  protected _rotation = 0
-
-  /**
-   * The X-coordinate value of the normalized local X axis,
-   * the first column of the local transformation matrix without a scale.
-   */
   protected _cx = 1
-
-  /**
-   * The Y-coordinate value of the normalized local X axis,
-   * the first column of the local transformation matrix without a scale.
-   */
   protected _sx = 0
-
-  /**
-   * The X-coordinate value of the normalized local Y axis,
-   * the second column of the local transformation matrix without a scale.
-   */
   protected _cy = 0
-
-  /**
-   * The Y-coordinate value of the normalized local Y axis,
-   * the second column of the local transformation matrix without a scale.
-   */
   protected _sy = 1
+  protected _translateX = 0
+  protected _translateY = 0
+  protected _scaleX = 1
+  protected _scaleY = 1
+  protected _skewX = 0
+  protected _skewY = 0
+  protected _rotate = 0
 
-  /**
-   * The position
-   */
-  readonly position = new Vector2(0, 0).onUpdate(this._onUpdate.bind(this))
+  dirtyId = 0
+  protected _needsUpdateArray = false
+  protected _needsUpdateFields = false
 
-  /**
-   * The scale
-   */
-  readonly scale = new Vector2(1, 1).onUpdate(this._onUpdate.bind(this))
+  constructor(
+    public autoUpdate = true,
+  ) {
+    super()
+  }
 
-  /**
-   * Transform's skew (in radians)
-   */
-  readonly skew = new Vector2(0, 0).onUpdate(this._onUpdateSkew.bind(this))
+  protected override _onUpdate(array: Array<number>): void {
+    super._onUpdate(array)
+    this._requestUpdateFields()
+  }
 
-  /** The rotation of the object in radians. */
-  get rotation(): number { return this._rotation }
-  set rotation(val) {
-    if (this._rotation !== val) {
-      this._rotation = val
-      this._onUpdateSkew()
+  protected _updateSkew(): void {
+    this._cx = Math.cos(this._rotate + this._skewY)
+    this._sx = Math.sin(this._rotate + this._skewY)
+    this._cy = -Math.sin(this._rotate - this._skewX) // cos, added PI/2
+    this._sy = Math.cos(this._rotate - this._skewX) // sin, added PI/2
+  }
+
+  protected _requestUpdateArray() {
+    if (this.autoUpdate) {
+      this._performUpdateArray()
+    } else {
+      this._needsUpdateArray = true
     }
   }
 
-  constructor(array?: ArrayLike<number>) {
-    super(array)
-
-    if (this.toString() !== '1,0,0,0,1,0,0,0,1') {
-      this.sync()
+  protected _requestUpdateFields() {
+    if (this.autoUpdate) {
+      this._performUpdateFields()
+    } else {
+      this._needsUpdateFields = true
     }
   }
 
-  protected _onUpdate(): void {
+  protected _performUpdateArray(): void {
+    const a = this._cx * this._scaleX
+    const b = this._sx * this._scaleX
+    const c = this._cy * this._scaleY
+    const d = this._sy * this._scaleY
+    const tx = this._translateX
+    const ty = this._translateY
+    const array = this._array
+    this._array = [
+      a, c, tx,
+      b, d, ty,
+      array[6], array[7], array[8],
+    ]
     this.dirtyId++
   }
 
-  protected _onUpdateSkew(): void {
-    this._cx = Math.cos(this._rotation + this.skew.y)
-    this._sx = Math.sin(this._rotation + this.skew.y)
-    this._cy = -Math.sin(this._rotation - this.skew.x) // cos, added PI/2
-    this._sy = Math.cos(this._rotation - this.skew.x) // sin, added PI/2
-    this.dirtyId++
-  }
-
-  sync() {
+  protected _performUpdateFields() {
     const [
       a, c, tx,
       b, d, ty,
-    ] = this
-
+    ] = this._array
     const skewX = -Math.atan2(-c, d)
     const skewY = Math.atan2(b, a)
     const delta = Math.abs(skewX + skewY)
     if (delta < 0.00001 || Math.abs(PI_2 - delta) < 0.00001) {
-      this.rotation = skewY
-      this.skew.x = this.skew.y = 0
+      this._rotate = skewY
+      this._skewX = this._skewY = 0
     } else {
-      this.rotation = 0
-      this.skew.x = skewX
-      this.skew.y = skewY
+      this._rotate = 0
+      this._skewX = skewX
+      this._skewY = skewY
     }
-    this.scale.x = Math.sqrt((a * a) + (b * b))
-    this.scale.y = Math.sqrt((c * c) + (d * d))
-    this.position.x = tx
-    this.position.y = ty
+    this._scaleX = Math.sqrt((a * a) + (b * b))
+    this._scaleY = Math.sqrt((c * c) + (d * d))
+    this._translateX = tx
+    this._translateY = ty
+    this.dirtyId++
   }
 
-  /**
-   * Returns a copy of the transform rotated by the given angle (in radians).
-   *
-   * @param angle (in radians)
-   */
-  rotated(angle: number): Transform2D {
-    const cloned = this.clone()
-    cloned.rotation = angle
-    cloned.update()
-    return cloned
-  }
+  translateX(x: number): this { return this.translate(x, this._translateY) }
+  translateY(y: number): this { return this.translate(this._translateX, y) }
+  scaleX(x: number): this { return this.scale(x, this._scaleY) }
+  scaleY(y: number): this { return this.scale(this._scaleX, y) }
+  skewX(x: number): this { return this.skew(x, this._skewY) }
+  skewY(y: number): this { return this.skew(this._skewX, y) }
 
-  /**
-   * @param x
-   * @param y
-   */
-  skewed(x: number, y: number): Transform2D {
-    const cloned = this.clone()
-    cloned.skew.update(x, y)
-    cloned.update()
-    return cloned
-  }
-
-  /**
-   * Returns a copy of the transform scaled by the given scale factor.
-   *
-   * @param x
-   * @param y
-   */
-  scaled(x: number, y: number): Transform2D {
-    const cloned = this.clone()
-    cloned.scale.update(x, y)
-    cloned.update()
-    return cloned
-  }
-
-  /**
-   * Returns a copy of the transform translated by the given offset.
-   *
-   * @param x
-   * @param y
-   */
-  translated(x: number, y: number): Transform2D {
-    const cloned = this.clone()
-    cloned.position.update(x, y)
-    cloned.update()
-    return cloned
-  }
-
-  inverse(): Transform2D {
-    const cloned = this.clone().invert()
-    this.sync()
-    return cloned
-  }
-
-  clone(): Transform2D {
-    return new Transform2D(this.toArray())
-  }
-
-  copy(value: ArrayLike<number>): this {
-    this.set(Array.from(value))
-    this.sync()
+  skew(x: number, y: number): this {
+    this._skewX = x
+    this._skewY = y
+    this._updateSkew()
+    this._requestUpdateArray()
     return this
   }
 
+  translate(x: number, y: number): this {
+    this._translateX = x
+    this._translateY = y
+    this._requestUpdateArray()
+    return this
+  }
+
+  scale(x: number, y: number): this {
+    this._scaleX = x
+    this._scaleY = y
+    this._requestUpdateArray()
+    return this
+  }
+
+  rotate(rad: number): this {
+    this._rotate = rad
+    this._updateSkew()
+    this._requestUpdateArray()
+    return this
+  }
+
+  applyToPoint(x: number, y: number): Array<number> {
+    const [a, c, tx, b, d, ty] = this._array
+    return [
+      (a * x) + (c * y) + tx,
+      (b * x) + (d * y) + ty,
+    ]
+  }
+
+  inverse(): this {
+    return this.clone().invert()
+  }
+
   update(): boolean {
-    if (this._dirtyId === this.dirtyId) {
-      return false
+    let updated = false
+
+    if (this._needsUpdateArray) {
+      this._needsUpdateArray = false
+      this._performUpdateArray()
+      updated = true
     }
 
-    this._dirtyId = this.dirtyId
+    if (this._needsUpdateFields) {
+      this._needsUpdateFields = false
+      this._performUpdateFields()
+      updated = true
+    }
 
-    const { x: scaleX, y: scaleY } = this.scale
-
-    const a = this._cx * scaleX
-    const b = this._sx * scaleX
-    const c = this._cy * scaleY
-    const d = this._sy * scaleY
-    const tx = this.position.x
-    const ty = this.position.y
-
-    this.set([
-      a, c, tx,
-      b, d, ty,
-      this[6], this[7], this[8],
-    ])
-
-    return true
+    return updated
   }
 }

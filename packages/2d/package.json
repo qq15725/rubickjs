@@ -45,10 +45,11 @@
   },
   "devDependencies": {
     "@rubickjs/core": "workspace:*",
+    "@rubickjs/canvas": "workspace:*",
     "@rubickjs/assets": "workspace:*"
   },
   "peerDependencies": {
-    "@rubickjs/core": "workspace:*",
+    "@rubickjs/canvas": "workspace:*",
     "@rubickjs/assets": "workspace:*"
   }
 }

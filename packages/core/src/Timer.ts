@@ -1,6 +1,8 @@
 import { clamp } from '@rubickjs/math'
 import { Node } from './Node'
+import { customNode } from './decorators'
 
+@customNode('timer')
 export class Timer extends Node {
   currentTime = 0
 
@@ -31,8 +33,8 @@ export class Timer extends Node {
   }
 
   protected _addTime(delta: number): number {
-    const startTime = this._startTime
-    const endTime = this._endTime
+    const startTime = this.startTime
+    const endTime = this.endTime
     let time = this.currentTime
     time += delta
     if (this.loop) {

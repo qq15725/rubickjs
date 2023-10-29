@@ -1,7 +1,7 @@
-import { Vector2 } from '@rubickjs/math'
-import { defineProps } from '@rubickjs/shared'
+import { isPow2 } from '@rubickjs/shared'
+import { state } from '../decorators'
 import { Resource } from '../Resource'
-import type { WebGLRenderer, WebGLTextureFilterMode, WebGLTextureWrapMode } from '@rubickjs/renderer'
+import type { WebGLRenderer, WebGLTextureFilterMode, WebGLTextureOptions, WebGLTextureWrapMode } from '@rubickjs/renderer'
 
 export type TextureFilterMode = WebGLTextureFilterMode
 export type TextureWrapMode = WebGLTextureWrapMode
@@ -12,110 +12,127 @@ export type TexturePixelsSource = {
 }
 export type TextureSource = TexImageSource | TexturePixelsSource
 
-export interface Texture {
-  filterMode: TextureFilterMode
-  wrapMode: TextureWrapMode
-  pixelRatio: number
-}
-
-@defineProps({
-  filterMode: { internal: '_filterMode', onUpdated: 'updateSource' },
-  wrapMode: { internal: '_wrapMode', onUpdated: 'updateSource' },
-  pixelRatio: { internal: '_pixelRatio', onUpdated: 'updateSource' },
-})
 export class Texture<T extends TextureSource = TextureSource> extends Resource {
-  /** Empty texture */
   static get EMPTY() { return new this({ width: 1, height: 1, pixels: null }) }
-
-  /** White texture */
   static get WHITE() { return new this({ width: 1, height: 1, pixels: new Uint8Array([255, 255, 255, 255]) }) }
+  static get BLACK() { return new this({ width: 1, height: 1, pixels: new Uint8Array([0, 0, 0, 255]) }) }
+  static get RED() { return new this({ width: 1, height: 1, pixels: new Uint8Array([255, 0, 0, 255]) }) }
+  static get GREEN() { return new this({ width: 1, height: 1, pixels: new Uint8Array([0, 255, 0, 255]) }) }
+  static get BLUE() { return new this({ width: 1, height: 1, pixels: new Uint8Array([0, 0, 255, 255]) }) }
 
-  /** Texture width and height */
-  protected _size = new Vector2(0, 0)
-  get size(): Vector2 { return this._size }
-  set size(val: { x: number; y: number }) { this._size.update(val.x, val.y) }
-  get width() { return this._size.x }
-  set width(val) { this._size.x = val }
-  get height() { return this._size.y }
-  set height(val) { this._size.y = val }
-  get valid(): boolean { return Boolean(this._size[0] && this._size[1]) }
+  @state() source!: T
+  @state() width = 0
+  @state() height = 0
+  @state() filterMode: TextureFilterMode = 'linear'
+  @state() wrapMode: TextureWrapMode = 'clamp_to_edge'
+  @state() pixelRatio = 1
 
-  protected _filterMode: TextureFilterMode = 'linear'
-  protected _wrapMode: TextureWrapMode = 'clamp_to_edge'
-  protected _pixelRatio = 1
+  protected _isPowerOfTwo = false
+  protected _needsUpload = false
 
-  constructor(
-    public source: T,
-  ) {
+  get valid(): boolean { return Boolean(this.width && this.height) }
+  get realWidth(): number { return Math.round(this.width * this.pixelRatio) }
+  get realHeight(): number { return Math.round(this.height * this.pixelRatio) }
+
+  constructor(source: T) {
     super()
-    this.updateSource()
-    this.size.onUpdate(this._onUpdateSize.bind(this))
+    this.source = source
+    this._updateSize()
   }
 
-  protected _getSouce(): TextureSource {
-    return this.source
+  protected _refreshPOT(): void {
+    this._isPowerOfTwo = isPow2(this.realWidth) && isPow2(this.realHeight)
   }
 
-  glTextureProps() {
+  /** @internal */
+  _glTextureOptions(renderer: WebGLRenderer): WebGLTextureOptions {
+    let value = this.source
+
+    if ('pixels' in value) {
+      value = {
+        pixels: value.pixels,
+        width: this.realWidth,
+        height: this.realHeight,
+      } as any
+    }
+
+    let wrapMode = this.wrapMode
+
+    if (renderer.version === 1 && !this._isPowerOfTwo) {
+      wrapMode = 'clamp_to_edge'
+    }
+
     return {
-      index: 0,
+      value,
       target: 'texture_2d' as const,
-      source: this._getSouce(),
-      filterMode: this._filterMode,
-      wrapMode: this._wrapMode,
+      location: 0,
+      filterMode: this.filterMode,
+      wrapMode,
     }
   }
 
-  glTexture(renderer: WebGLRenderer): WebGLTexture {
+  /** @internal */
+  _glTexture(renderer: WebGLRenderer): WebGLTexture {
     return renderer.getRelated(this, () => {
-      return renderer.createTexture(this.glTextureProps())
+      return renderer.texture.create(this._glTextureOptions(renderer))
     })
   }
 
-  protected _onUpdateSize() {
-    if ('pixels' in this.source && !this.source.pixels) {
-      const source = this.source as TexturePixelsSource
-      const pixelRatio = this.pixelRatio
-      const [width, height] = this._size
-      source.width = width * pixelRatio
-      source.height = height * pixelRatio
+  protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
+    super._onUpdateProperty(key, value, oldValue)
+
+    switch (key) {
+      case 'width':
+      case 'height':
+      case 'filterMode':
+      case 'wrapMode':
+      case 'pixelRatio':
+      case 'source':
+        this.requestUpload()
+        break
     }
-    this.addDirty('size')
   }
 
-  updateSource() {
+  protected _updateSize() {
     const source = this.source as any
-    const width = Number(source.naturalWidth || source.videoWidth || source.width || 0)
-    const height = Number(source.naturalHeight || source.videoHeight || source.height || 0)
-    const pixelRatio = this._pixelRatio
-    this._size.update(width / pixelRatio, height / pixelRatio)
-    this.addDirty('source')
+    if ('pixels' in source) {
+      this.width = Math.max(this.width, source.width)
+      this.height = Math.max(this.height, source.height)
+    } else {
+      this.width = Number(source.naturalWidth || source.videoWidth || source.width || 0)
+      this.height = Number(source.naturalHeight || source.videoHeight || source.height || 0)
+    }
   }
 
-  upload(renderer: WebGLRenderer) {
-    if (!this.isDirty) return
-    this.clearDirty()
+  requestUpload() {
+    this._needsUpload = true
+    this._updateSize()
+    this._refreshPOT()
+  }
 
-    renderer.updateTexture(
-      this.glTexture(renderer),
-      this.glTextureProps(),
-    )
+  upload(renderer: WebGLRenderer): boolean {
+    if (this._needsUpload) {
+      this._needsUpload = false
+      renderer.texture.update(
+        this._glTexture(renderer),
+        this._glTextureOptions(renderer),
+      )
+      return true
+    }
+    return false
   }
 
   activate(
     renderer: WebGLRenderer,
     location = 0,
-    then?: () => void | false,
   ) {
-    renderer.activeTexture({
+    renderer.texture.bind({
       target: 'texture_2d',
-      value: this.glTexture(renderer),
-      unit: location,
-    }, () => {
-      this.upload(renderer)
-
-      return then?.()
+      value: this._glTexture(renderer),
+      location,
     })
+
+    this.upload(renderer)
   }
 }
 

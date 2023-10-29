@@ -1,24 +1,18 @@
 import { UvMaterial } from '../materials'
-import { Attribute } from './Attribute'
-import { AttributeBuffer } from './AttributeBuffer'
+import { VertexAttribute } from './VertexAttribute'
+import { VertexBuffer } from './VertexBuffer'
 import { IndexBuffer } from './IndexBuffer'
 import { Geometry } from './Geometry'
 import type { WebGLRenderer } from '@rubickjs/renderer'
 import type { Material } from '../materials'
 
 export class QuadUvGeometry extends Geometry {
-  /**
-   * Global instance
-   */
-  static instance = new this()
+  protected static _instance: QuadUvGeometry
+  static get instance() {
+    if (!this._instance) this._instance = new this()
+    return this._instance
+  }
 
-  /**
-   * Draw
-   *
-   * @param renderer
-   * @param material
-   * @param uniforms
-   */
   static draw(
     renderer: WebGLRenderer,
     material: Material = UvMaterial.instance,
@@ -29,30 +23,30 @@ export class QuadUvGeometry extends Geometry {
 
   constructor() {
     super({
+      vertexAttributes: {
+        position: new VertexAttribute({
+          buffer: new VertexBuffer({
+            data: new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]),
+            dynamic: false,
+          }),
+          size: 2,
+          normalized: false,
+          type: 'float',
+        }),
+        uv: new VertexAttribute({
+          buffer: new VertexBuffer({
+            data: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+            dynamic: false,
+          }),
+          size: 2,
+          normalized: false,
+          type: 'float',
+        }),
+      },
       indexBuffer: new IndexBuffer({
         data: new Uint16Array([0, 1, 2, 0, 2, 3]),
         dynamic: false,
       }),
     })
-
-    this.attributes.set('position', new Attribute({
-      buffer: new AttributeBuffer({
-        data: new Float32Array([-1, -1, 1, -1, 1, 1, -1, 1]),
-        dynamic: false,
-      }),
-      size: 2,
-      normalized: false,
-      type: 'float',
-    }))
-
-    this.attributes.set('uv', new Attribute({
-      buffer: new AttributeBuffer({
-        data: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
-        dynamic: false,
-      }),
-      size: 2,
-      normalized: false,
-      type: 'float',
-    }))
   }
 }

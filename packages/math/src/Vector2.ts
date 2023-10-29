@@ -4,19 +4,19 @@ import { Vector } from './Vector'
  * Vector2
  */
 export class Vector2 extends Vector {
-  get x() { return this[0] }
+  get x() { return this._array[0] }
   set x(val) {
-    if (this[0] !== val) {
-      this[0] = val
-      this._onUpdateCallback?.(this[0], this[1])
+    const [x, y] = this._array
+    if (x !== val) {
+      this.set([x, y])
     }
   }
 
-  get y() { return this[1] }
+  get y() { return this._array[1] }
   set y(val) {
-    if (this[1] !== val) {
-      this[1] = val
-      this._onUpdateCallback?.(this[0], this[1])
+    const [x, y] = this._array
+    if (y !== val) {
+      this.set([x, y])
     }
   }
 
@@ -28,36 +28,30 @@ export class Vector2 extends Vector {
 
   constructor(x = 0, y = 0) {
     super(2)
-    this[0] = x
-    this[1] = y
-  }
-
-  override onUpdate(callback: (x: number, y: number) => void): this {
-    this._onUpdateCallback = callback
-    return this
+    this.set([x, y])
   }
 
   update(x: number, y: number) {
-    if (this[0] !== x || this[1] !== y) {
-      this[0] = x
-      this[1] = y
-      this._onUpdateCallback?.(x, y)
+    const [oldX, oldY] = this._array
+    if (oldX !== x || oldY !== y) {
+      this.set([x, y])
     }
   }
 
   getLength(): number {
-    const [x, y] = this
+    const [x, y] = this._array
     return Math.sqrt(x * x + y * y)
   }
 
   getAngle(): number {
-    return Math.atan2(-this[1], -this[0]) + Math.PI
+    const [x, y] = this._array
+    return Math.atan2(-x, -y) + Math.PI
   }
 
   normalize(): this {
+    const [x, y] = this._array
     const scalar = 1 / (this.getLength() || 1)
-    this[0] *= scalar
-    this[1] *= scalar
+    this.set([x * scalar, y * scalar])
     return this
   }
 }

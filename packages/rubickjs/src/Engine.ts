@@ -74,9 +74,9 @@ export class Engine extends EventEmitter {
    * Background color
    */
   protected _background = new Color()
-  get background() { return this._background.source }
+  get background() { return this._background.value }
   set background(val) {
-    this._background.source = val
+    this._background.value = val
     const { r, g, b, a } = this._background
     this.renderer.gl.clearColor(r, g, b, a)
   }
@@ -181,8 +181,10 @@ export class Engine extends EventEmitter {
    * @param updateStyle
    */
   resize(width: number, height: number, updateStyle = true): this {
-    this.root.size.update(width, height)
     this.renderer.resize(width, height, updateStyle)
+    this.root.width = width
+    this.root.height = height
+    this.renderer.program.uniforms.projectionMatrix = this.root.toProjectionArray(true)
     return this
   }
 
@@ -190,7 +192,7 @@ export class Engine extends EventEmitter {
    * Render scene tree
    */
   render(delta = 0): void {
-    if (delta !== undefined) this.tree.processDeltaTime = delta
+    if (delta !== undefined) this.tree.deltaTime = delta
     this.tree.render(this.renderer)
   }
 

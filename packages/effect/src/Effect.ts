@@ -1,4 +1,4 @@
-import { Node, QuadUvGeometry, Viewport } from '@rubickjs/core'
+import { Node, QuadUvGeometry, Viewport, customNode } from '@rubickjs/core'
 import { EffectMaterial } from './EffectMaterial'
 import type { Material } from '@rubickjs/core'
 import type { WebGLRenderer } from '@rubickjs/renderer'
@@ -31,9 +31,11 @@ export interface EffectContext {
   to?: Viewport
 }
 
+@customNode({
+  tagName: 'effect',
+  renderable: true,
+})
 export class Effect extends Node {
-  protected override _renderable = true
-
   /** Viewports */
   readonly viewport = new Viewport()
   readonly viewport2 = new Viewport()
@@ -76,19 +78,19 @@ export class Effect extends Node {
 
   protected _enterTree() {
     const tree = this._tree!
-    tree.on('processFrame', this._onTreeProcessFrame)
-    tree.renderQueue.on('pushing', this._onRenderQueuePushing)
-    tree.renderQueue.on('pushed', this._onRenderQueuePushed)
+    tree.on('processing', this._onProcessing)
+    tree.on('nodeProcessing', this._onNodeProcessing)
+    tree.on('nodeProcessed', this._onNodeProcessed)
   }
 
   protected _exitTree() {
     const tree = this._tree!
-    tree.off('processFrame', this._onTreeProcessFrame)
-    tree.renderQueue.off('pushing', this._onRenderQueuePushing)
-    tree.renderQueue.off('pushed', this._onRenderQueuePushed)
+    tree.off('processing', this._onProcessing)
+    tree.off('nodeProcessing', this._onNodeProcessing)
+    tree.off('nodeProcessed', this._onNodeProcessed)
   }
 
-  protected _onTreeProcessFrame = () => {
+  protected _onProcessing = () => {
     switch (this._mode) {
       case 'transition':
         this._previousSibling = this.previousSibling
@@ -101,40 +103,46 @@ export class Effect extends Node {
     }
   }
 
-  protected _onRenderQueuePushing = (renderable: Node) => {
-    if (!this.needsRender()) return
+  protected _onNodeProcessing = (node: Node) => {
+    if (!this.isRenderable()) return
 
-    const renderQueue = this._tree?.renderQueue
-    if (!renderQueue) return
+    const renderStack = this._tree?.renderStack
+
+    if (!renderStack) {
+      return
+    }
 
     switch (this._mode) {
       case 'parent':
-        if (renderable === this._parent) {
-          renderQueue.push(this, false)
+        if (node === this._parent) {
+          renderStack.push(this)
         }
         break
     }
   }
 
-  protected _onRenderQueuePushed = (renderable: Node) => {
-    if (!this.needsRender()) return
+  protected _onNodeProcessed = (node: Node) => {
+    if (!this.isRenderable()) return
 
-    const renderQueue = this._tree?.renderQueue
-    if (!renderQueue) return
+    const renderStack = this._tree?.renderStack
+
+    if (!renderStack) {
+      return
+    }
 
     switch (this._mode) {
       case 'parent':
-        if (renderable === this._parent) {
-          renderQueue.push(this, false)
+        if (node === this._parent) {
+          renderStack.push(this)
         }
         break
       case 'transition':
-        if (renderable === this._previousSibling) {
+        if (node === this._previousSibling) {
           this._previousSibling = undefined
-          renderQueue.push(this, false)
-        } else if (renderable === this._nextSibling) {
+          renderStack.push(this)
+        } else if (node === this._nextSibling) {
           this._nextSibling = undefined
-          renderQueue.push(this, false)
+          renderStack.push(this)
         }
         break
     }
@@ -151,7 +159,7 @@ export class Effect extends Node {
           case 'children':
             if (this._children.length) {
               super.notification(what)
-              this._tree?.renderQueue.push(this, false)
+              this._tree?.renderStack.push(this)
             }
             break
         }
@@ -178,7 +186,8 @@ export class Effect extends Node {
           this._renderCallViewport = tree?.getCurrentViewport()
           if (this._renderCallViewport) {
             this.viewport.activateWithCopy(renderer, this._renderCallViewport)
-            this.viewport2.size = this._renderCallViewport.size
+            this.viewport2.width = this._renderCallViewport.width
+            this.viewport2.height = this._renderCallViewport.height
           }
           this.viewport2.activate(renderer)
           tree?.setCurrentViewport(this.viewport2)
@@ -196,8 +205,8 @@ export class Effect extends Node {
               from: this.viewport,
               to: this.viewport2,
             })
-            renderer.activeTexture({ value: null, unit: 0 })
-            renderer.activeTexture({ value: null, unit: 1 })
+            renderer.texture.bind({ value: null, location: 0 })
+            renderer.texture.bind({ value: null, location: 1 })
           }
         }
         break
@@ -208,7 +217,8 @@ export class Effect extends Node {
         if (this._renderCallId % 2 === 0) {
           this._renderCallViewport = tree?.getCurrentViewport()
           if (this._renderCallViewport) {
-            this.viewport.size = this._renderCallViewport.size
+            this.viewport.width = this._renderCallViewport.width
+            this.viewport.height = this._renderCallViewport.height
           }
           this.viewport.activate(renderer)
           tree?.setCurrentViewport(this.viewport)

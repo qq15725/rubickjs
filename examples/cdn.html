@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CDN</title>
+  <style>
+    html, body {
+      margin: 0;
+    }
+  </style>
+  <script src="https://unpkg.com/rubickjs"></script>
+</head>
+<body>
+<script type="module">
+  const { Canvas } = window.Rubickjs
+
+  const canvas = new Canvas()
+
+  // view
+  const view = canvas.observeView().view
+  view.style.width = '100vw'
+  view.style.height = '100vh'
+  document.body.append(view)
+</script>
+</body>
+</html>
