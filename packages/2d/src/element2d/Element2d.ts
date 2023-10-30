@@ -1,8 +1,8 @@
 import { Texture, customNode, property } from '@rubickjs/core'
 import { Transform2D } from '@rubickjs/math'
-import { Node2d } from '../Node2D'
+import { Node2d } from '../node2d'
 import { Assets } from '@rubickjs/assets'
-import type { Node2dOptions } from '../Node2D'
+import type { Node2dOptions } from '../node2d'
 
 export interface Element2dOptions extends Node2dOptions {
   borderRadius?: number
