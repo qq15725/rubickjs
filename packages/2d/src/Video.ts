@@ -2,9 +2,9 @@ import { VideoTexture, customNode, property } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
 import { Element2d } from './element2d'
-import type { Element2dOptions } from './element2d'
+import type { Element2dProperties } from './element2d'
 
-export interface VideoOptions extends Element2dOptions {
+export interface VideoProperties extends Element2dProperties {
   src?: string
 }
 
@@ -14,9 +14,9 @@ export class Video extends Element2d {
 
   protected _src?: VideoTexture
 
-  constructor(options: VideoOptions = {}) {
+  constructor(properties: VideoProperties = {}) {
     super()
-    this.setProperties(options)
+    this.setProperties(properties)
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {

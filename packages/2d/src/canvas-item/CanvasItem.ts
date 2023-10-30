@@ -5,11 +5,11 @@ import { PI_2, parseCssFunctions } from '@rubickjs/shared'
 import { Canvas } from '@rubickjs/canvas'
 import type { WebGLBlendMode, WebGLRenderer } from '@rubickjs/renderer'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
-import type { NodeOptions } from '@rubickjs/core'
+import type { NodeProperties } from '@rubickjs/core'
 
 export type CanvasItemBlendMode = WebGLBlendMode
 
-export interface CanvasItemOptions extends NodeOptions {
+export interface CanvasItemProperties extends NodeProperties {
   opacity?: number
   backgroundColor?: string
   tint?: string
@@ -45,9 +45,9 @@ export class CanvasItem extends Node {
   protected _layoutedBatchables: Array<CanvasBatchable2D> = []
   protected _batchables: Array<CanvasBatchable2D> = []
 
-  constructor(options: CanvasItemOptions = {}) {
+  constructor(properties: CanvasItemProperties = {}) {
     super()
-    this.setProperties(options)
+    this.setProperties(properties)
   }
 
   override isVisible(): boolean {

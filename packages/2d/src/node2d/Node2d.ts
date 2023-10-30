@@ -5,9 +5,9 @@ import { PointerInputEvent } from '@rubickjs/input'
 import { CanvasItem } from '../canvas-item'
 import type { UIInputEvent } from '@rubickjs/input'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
-import type { CanvasItemOptions } from '../canvas-item'
+import type { CanvasItemProperties } from '../canvas-item'
 
-export interface Node2dOptions extends CanvasItemOptions {
+export interface Node2dProperties extends CanvasItemProperties {
   x?: number
   y?: number
   left?: number
@@ -51,9 +51,9 @@ export class Node2d extends CanvasItem {
   /** @internal */
   readonly _computedTransform = new Transform2D()
 
-  constructor(options: Node2dOptions = {}) {
+  constructor(properties: Node2dProperties = {}) {
     super()
-    this.setProperties(options)
+    this.setProperties(properties)
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {

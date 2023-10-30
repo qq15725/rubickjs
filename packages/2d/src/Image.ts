@@ -4,14 +4,14 @@ import { Transform2D, clamp } from '@rubickjs/math'
 import { Element2d } from './element2d'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
 import type { Texture } from '@rubickjs/core'
-import type { Element2dOptions } from './element2d'
+import type { Element2dProperties } from './element2d'
 
 export interface ImageFrame {
   duration: number
   texture: Texture
 }
 
-export interface ImageOptions extends Element2dOptions {
+export interface ImageProperties extends Element2dProperties {
   src?: string
 }
 
@@ -25,9 +25,9 @@ export class Image extends Element2d {
   protected _frames: Array<ImageFrame> = []
   protected _src?: Texture
 
-  constructor(options: ImageOptions = {}) {
+  constructor(properties: ImageProperties = {}) {
     super()
-    this.setProperties(options)
+    this.setProperties(properties)
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {

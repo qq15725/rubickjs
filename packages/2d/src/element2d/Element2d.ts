@@ -2,9 +2,9 @@ import { Texture, customNode, property } from '@rubickjs/core'
 import { Transform2D } from '@rubickjs/math'
 import { Assets } from '@rubickjs/assets'
 import { Node2d } from '../node2d'
-import type { Node2dOptions } from '../node2d'
+import type { Node2dProperties } from '../node2d'
 
-export interface Element2dOptions extends Node2dOptions {
+export interface Element2dProperties extends Node2dProperties {
   borderRadius?: number
   backgroundImage?: string
 }
@@ -16,9 +16,9 @@ export class Element2d extends Node2d {
 
   protected _backgroundImage?: Texture
 
-  constructor(options: Element2dOptions = {}) {
+  constructor(properties: Element2dProperties = {}) {
     super()
-    this.setProperties(options)
+    this.setProperties(properties)
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {

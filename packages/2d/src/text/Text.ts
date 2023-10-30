@@ -85,9 +85,9 @@ export class Text extends Element2d {
 
   protected _domContext = this._src?.source.getContext('2d')
 
-  constructor(options: Record<string, any> = {}) {
+  constructor(properties: Record<string, any> = {}) {
     super()
-    this.setProperties(options)
+    this.setProperties(properties)
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {

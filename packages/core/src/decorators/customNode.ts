@@ -1,11 +1,11 @@
-export interface CustomNodeOptions {
+export interface CustomNodeProperties {
   tagName: string
   renderable?: boolean
 }
 
 export function customNode(tagName: string): any
-export function customNode(options: CustomNodeOptions): any
-export function customNode(options: string | CustomNodeOptions): any {
+export function customNode(options: CustomNodeProperties): any
+export function customNode(options: string | CustomNodeProperties): any {
   let tagName: string
   let renderable: boolean | undefined
   if (typeof options === 'string') {

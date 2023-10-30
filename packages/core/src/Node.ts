@@ -13,7 +13,7 @@ export enum InternalMode {
 
 export type Visibility = 'visible' | 'hidden'
 
-export interface NodeOptions {
+export interface NodeProperties {
   name?: string
   visibility?: Visibility
 }
@@ -60,9 +60,9 @@ export class Node extends ReactiveTarget {
     return children ? children[children.length - 1] : undefined
   }
 
-  constructor(options: NodeOptions = {}) {
+  constructor(properties: NodeProperties = {}) {
     super()
-    this.setProperties(options)
+    this.setProperties(properties)
   }
 
   /** Meta */
