@@ -1,4 +1,5 @@
-import { PI_2, curves } from '../utils'
+import { PI_2 } from '@rubickjs/shared'
+import { curves } from '../utils'
 import { Round } from './Round'
 import { Shape } from './Shape'
 

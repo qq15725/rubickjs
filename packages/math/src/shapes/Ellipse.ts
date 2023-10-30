@@ -1,4 +1,4 @@
-import { PI_2 } from '../utils'
+import { PI_2 } from '@rubickjs/shared'
 import { Arc } from './Arc'
 
 export class Ellipse extends Arc {

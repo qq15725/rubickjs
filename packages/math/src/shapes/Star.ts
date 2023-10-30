@@ -1,4 +1,4 @@
-import { PI_2 } from '../utils'
+import { PI_2 } from '@rubickjs/shared'
 import { Polygon } from './Polygon'
 
 export class Star extends Polygon {
