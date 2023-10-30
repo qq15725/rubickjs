@@ -1,7 +1,7 @@
 import { Texture, customNode, property } from '@rubickjs/core'
 import { Transform2D } from '@rubickjs/math'
-import { Node2d } from '../node2d'
 import { Assets } from '@rubickjs/assets'
+import { Node2d } from '../node2d'
 import type { Node2dOptions } from '../node2d'
 
 export interface Element2dOptions extends Node2dOptions {

@@ -1,6 +1,4 @@
-import { PI, PI_2 } from '@rubickjs/shared'
-
-export { PI, PI_2 }
+import { PI } from '@rubickjs/shared'
 
 export const DEG_TO_RAD = PI / 180
 export const RAD_TO_DEG = 180 / PI

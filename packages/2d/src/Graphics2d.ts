@@ -1,6 +1,6 @@
 import { customNode } from '@rubickjs/core'
 import { CanvasRenderingContext2D } from '@rubickjs/canvas'
-import { PI_2 } from '@rubickjs/math'
+import { PI_2 } from '@rubickjs/shared'
 import { Node2d } from './node2d'
 import type { Polygon } from '@rubickjs/math'
 
