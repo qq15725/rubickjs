@@ -4,7 +4,10 @@ import { PI_2 } from '@rubickjs/shared'
 import { Node2d } from './node2d'
 import type { Polygon } from '@rubickjs/math'
 
-@customNode('graphics2d')
+@customNode({
+  tagName: 'graphics2d',
+  renderable: true,
+})
 export class Graphics2d extends Node2d {
   protected _context = new CanvasRenderingContext2D()
 

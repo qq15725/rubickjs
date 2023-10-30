@@ -1,4 +1,4 @@
-import { Animation, Effect, Engine, Image, Node2d, Text } from 'rubickjs'
+import { Animation, Effect, Engine, Graphics2d, Image, Node2d, Text } from 'rubickjs'
 
 const engine = new Engine()
 
@@ -36,6 +36,7 @@ engine.root.addChild(new Text({ text: 'Text12312211221' }))
 const bunny = new Image({
   src: 'https://pixijs.com/assets/bunny.png',
   backgroundColor: '#0000FF',
+  borderRadius: 30,
 })
 engine.root.addChild(bunny)
 
@@ -47,7 +48,6 @@ const group = new Node2d({
 for (let i = 0; i < 5; i++) {
   const item = new Image({
     src: 'https://pixijs.com/assets/bunny.png',
-    backgroundColor: '#00FF0011',
   })
   item.x = i * 10
   group.addChild(item)
@@ -85,6 +85,8 @@ engine.timeline.on('update', (_, delta) => {
   bunny.rotate += 0.01 * delta
   group.rotate += 0.01 * delta
 })
+
+engine.root.addChild(new Graphics2d({ backgroundColor: '#000000' }).drawRect(200, 200, 300, 300))
 
 engine.start()
 

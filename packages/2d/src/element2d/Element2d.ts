@@ -1,15 +1,17 @@
 import { Texture, customNode, property } from '@rubickjs/core'
-import { Transform2D } from '@rubickjs/math'
 import { Assets } from '@rubickjs/assets'
 import { Node2d } from '../node2d'
 import type { Node2dProperties } from '../node2d'
 
 export interface Element2dProperties extends Node2dProperties {
-  borderRadius?: number
   backgroundImage?: string
+  borderRadius?: number
 }
 
-@customNode('element2d')
+@customNode({
+  tagName: 'element2d',
+  renderable: true,
+})
 export class Element2d extends Node2d {
   @property() borderRadius?: number
   @property() backgroundImage?: string
@@ -41,31 +43,14 @@ export class Element2d extends Node2d {
 
   protected override _draw(): void {
     super._draw()
-    if (this.width && this.height) {
-      this._drawBackgroundImage()
-      this._drawFill()
-    }
-  }
-
-  protected _drawBackgroundImage() {
-    const backgroundImage = this._backgroundImage
-    if (backgroundImage) {
-      this._context.texture = backgroundImage
-      this._context.textureTransform = new Transform2D().scale(
-        this.width! / backgroundImage.width,
-        this.height! / backgroundImage.height,
-      )
-    }
+    this._drawFill()
   }
 
   protected _drawFill() {
-    const x = 0
-    const y = 0
-    const { width = 0, height = 0 } = this
     if (this.borderRadius) {
-      this._context.roundRect(x, y, width, height, this.borderRadius)
+      this._context.roundRect(0, 0, this.width, this.height, this.borderRadius)
     } else {
-      this._context.rect(x, y, width, height)
+      this._context.rect(0, 0, this.width, this.height)
     }
     this._context.fill()
   }

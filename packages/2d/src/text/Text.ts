@@ -2,6 +2,7 @@ import { IN_BROWSER } from '@rubickjs/shared'
 import { Texture, customNode, property } from '@rubickjs/core'
 import { Transform2D } from '@rubickjs/math'
 import { Element2d } from '../element2d'
+import type { Element2dProperties } from '../element2d'
 
 export type FontWeight = 'normal' | 'bold' | 'lighter' | 'bolder' | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
 export type FontStyle = 'normal' | 'italic' | 'oblique' | `oblique ${ string }`
@@ -61,6 +62,22 @@ export interface TextFragment {
   style: Partial<TextOnlyStyle>
 }
 
+export interface TextProperties extends Element2dProperties {
+  text?: string | Array<StyleableTextParagraph>
+  color?: string
+  fontSize?: number
+  fontWeight?: FontWeight
+  fontFamily?: string
+  fontStyle?: FontStyle
+  fontKerning?: FontKerning
+  textWrap?: TextWrap
+  textAlign?: TextAlign
+  textBaseline?: TextBaseline
+  textDecoration?: TextDecoration | null
+  direction?: 'inherit' | 'ltr' | 'rtl'
+  lineHeight?: number
+}
+
 @customNode('text')
 export class Text extends Element2d {
   @property() text: string | Array<StyleableTextParagraph> = ''
@@ -85,7 +102,7 @@ export class Text extends Element2d {
 
   protected _domContext = this._src?.source.getContext('2d')
 
-  constructor(properties: Record<string, any> = {}) {
+  constructor(properties: TextProperties = {}) {
     super()
     this.setProperties(properties)
   }

@@ -93,13 +93,14 @@ export class ReactiveTarget extends EventTarget {
     return this._changedProperties.has(key)
   }
 
-  setProperties(properties: Record<string, any>) {
+  setProperties(properties: Record<string, any>): this {
     const target = this.constructor as typeof ReactiveTarget
     for (const name in properties) {
       if (target.targetProperties.has(name)) {
         (this as any)[name] = properties[name]
       }
     }
+    return this
   }
 
   protected _requestUpdate(key?: PropertyKey, oldValue?: unknown): void {

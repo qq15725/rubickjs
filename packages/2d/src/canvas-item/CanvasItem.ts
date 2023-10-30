@@ -1,26 +1,23 @@
-import { clamp } from '@rubickjs/math'
-import { Color, ColorMatrix } from '@rubickjs/color'
 import { Node, customNode, property } from '@rubickjs/core'
-import { PI_2, parseCssFunctions } from '@rubickjs/shared'
+import { Color, ColorMatrix } from '@rubickjs/color'
 import { Canvas } from '@rubickjs/canvas'
+import { clamp } from '@rubickjs/math'
+import { PI_2, parseCssFunctions } from '@rubickjs/shared'
 import type { WebGLBlendMode, WebGLRenderer } from '@rubickjs/renderer'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
-import type { NodeProperties } from '@rubickjs/core'
+import type { NodeProperties, PropertyValues } from '@rubickjs/core'
 
 export type CanvasItemBlendMode = WebGLBlendMode
 
 export interface CanvasItemProperties extends NodeProperties {
   opacity?: number
-  backgroundColor?: string
   tint?: string
   filter?: string
   blendMode?: CanvasItemBlendMode
+  backgroundColor?: string
 }
 
-@customNode({
-  tagName: 'canvasItem',
-  renderable: true,
-})
+@customNode('CanvasItem')
 export class CanvasItem extends Node {
   @property() opacity = 1
   @property() backgroundColor = '#00000000'
@@ -29,10 +26,11 @@ export class CanvasItem extends Node {
   @property() blendMode?: CanvasItemBlendMode
 
   /** @internal */
-  _computedOpacity = this.opacity
+  _opacity = this.opacity
   /** @internal */
   _colorMatrix = new ColorMatrix()
 
+  protected _parentOpacity?: number
   protected _tint = new Color(0xFFFFFF)
   protected _backgroundColor = new Color(0x00000000)
 
@@ -50,27 +48,37 @@ export class CanvasItem extends Node {
     this.setProperties(properties)
   }
 
-  override isVisible(): boolean {
-    return super.isVisible()
-  }
+  protected override _onUpdate(changed: PropertyValues) {
+    super._onUpdate(changed)
 
-  protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
-    super._onUpdateProperty(key, value, oldValue)
+    if (changed.has('blendMode')) {
+      this._requestRepaint()
+    }
 
-    switch (key) {
-      case 'opacity':
-      case 'backgroundColor':
-      case 'tint':
-      case 'filter':
-      case 'blendMode':
-        this._requestRepaint()
-        break
+    if (changed.has('backgroundColor')) {
+      this._backgroundColor.value = this.backgroundColor
+      this._requestRepaint()
+    }
+
+    if (changed.has('tint')) {
+      this._tint.value = this.tint
+      this._requestRepaint()
+    }
+
+    if (changed.has('opacity')) {
+      this._computeOpacity()
+      this._requestRepaint()
+    }
+
+    if (changed.has('filter')) {
+      this._computeFilter()
+      this._requestRepaint()
     }
   }
 
   protected _computeOpacity(): void {
-    this._computedOpacity = clamp(0, this.opacity, 1)
-      * ((this._parent as CanvasItem)?._computedOpacity ?? 1)
+    this._opacity = clamp(0, this.opacity, 1)
+      * ((this._parent as CanvasItem)?._opacity ?? 1)
   }
 
   protected _computeFilter(): void {
@@ -113,6 +121,12 @@ export class CanvasItem extends Node {
   protected _requestRepaint(): void { this._needsRepaint = true }
 
   protected override _process(delta: number): void {
+    const parentOpacity = (this._parent as CanvasItem)?._opacity
+    if (parentOpacity !== this._parentOpacity) {
+      this._parentOpacity = parentOpacity
+      this._computeOpacity()
+    }
+
     super._process(delta)
 
     let batchables: Array<CanvasBatchable2D> | undefined
@@ -141,26 +155,23 @@ export class CanvasItem extends Node {
     }
   }
 
-  protected _onUpdateBatchables(): void { /** override */ }
   protected _draw(): void { /** override */ }
   protected _relayout(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> { return this._reflow(batchables) }
   protected _reflow(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> { return this._repaint(batchables) }
   protected _repaint(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> {
-    this._backgroundColor.value = this.backgroundColor
-    this._tint.value = this.tint
-    this._computeOpacity()
-    this._computeFilter()
     return batchables.map(batchable => {
       return {
         ...batchable,
         backgroundColor: this._backgroundColor.abgr,
-        tint: (this._computedOpacity * 255 << 24) + this._tint.bgr,
+        tint: (this._opacity * 255 << 24) + this._tint.bgr,
         colorMatrix: this._colorMatrix.toMatrix4().toArray(true),
         colorMatrixOffset: this._colorMatrix.toVector4().toArray(),
         blendMode: this.blendMode,
       }
     })
   }
+
+  protected _onUpdateBatchables(): void { /** override */ }
 
   protected override _render(renderer: WebGLRenderer): void {
     this._batchables.forEach(batchable => {
