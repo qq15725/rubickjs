@@ -1,5 +1,5 @@
 import { Shape } from './Shape'
-import type { Transform2D } from '../Transform2D'
+import type { Transform2D } from '../Transform2d'
 
 export class Round extends Shape {
   static buildContour(

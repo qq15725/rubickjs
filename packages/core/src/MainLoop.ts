@@ -17,6 +17,11 @@ export abstract class MainLoop extends Resource {
   protected _nextDeltaTime = 0
   protected _process?: (delta: number) => void
 
+  constructor() {
+    super()
+    this._onNextTick = this._onNextTick.bind(this)
+  }
+
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
     super._onUpdateProperty(key, value, oldValue)
 
@@ -42,7 +47,7 @@ export abstract class MainLoop extends Resource {
     }
   }
 
-  private _onNextTick = () => {
+  protected _onNextTick() {
     const elapsed = GlobalTicker.elapsed * this.speed
     const time = this._nextDeltaTime -= elapsed
     if (time <= 0) {

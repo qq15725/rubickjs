@@ -1,8 +1,8 @@
 import { Resource } from '../Resource'
-import { property } from '../decorators'
+import { protectedProperty } from '../decorators'
 import { VertexBuffer } from './VertexBuffer'
 
-export interface VertexAttributeOptions {
+export interface VertexAttributeProperties {
   buffer?: VertexBuffer
   size?: number
   normalized?: boolean
@@ -13,26 +13,22 @@ export interface VertexAttributeOptions {
 }
 
 export class VertexAttribute extends Resource {
-  @property() buffer: VertexBuffer
-  @property() size: number
-  @property() normalized: boolean
-  @property() type: 'float' | 'unsigned_byte' | 'unsigned_short'
-  @property() stride?: number
-  @property() offset?: number
-  @property() divisor?: number
+  @protectedProperty() buffer!: VertexBuffer
+  @protectedProperty({ default: 0 }) size!: number
+  @protectedProperty({ default: false }) normalized!: boolean
+  @protectedProperty({ default: 'float' }) type!: 'float' | 'unsigned_byte' | 'unsigned_short'
+  @protectedProperty() stride?: number
+  @protectedProperty() offset?: number
+  @protectedProperty() divisor?: number
 
   needsUpload = false
 
-  constructor(options: VertexAttributeOptions = {}) {
+  constructor(properties: VertexAttributeProperties = {}) {
     super()
-
-    this.buffer = options.buffer ?? new VertexBuffer()
-    this.size = options.size ?? 0
-    this.normalized = options.normalized ?? false
-    this.type = options.type ?? 'float'
-    this.stride = options.stride
-    this.offset = options.offset
-    this.divisor = options.divisor
+    this.setProperties({
+      buffer: new VertexBuffer(),
+      ...properties,
+    })
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {

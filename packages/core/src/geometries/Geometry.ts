@@ -73,8 +73,6 @@ export class Geometry extends Resource {
 
     const vao = this._glVertexArrayObject(renderer, material)
 
-    renderer.vertexArray.bind(vao ?? this._glVertexArray(renderer))
-
     let updateVertexArray = false
     let buffer: VertexBuffer | undefined
     this.vertexAttributes.forEach(attribute => {
@@ -100,6 +98,8 @@ export class Geometry extends Resource {
         this._glVertexArray(renderer),
       )
     }
+
+    renderer.vertexArray.bind(vao ?? this._glVertexArray(renderer))
 
     renderer.draw({
       mode: this.mode,

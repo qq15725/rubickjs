@@ -1,22 +1,25 @@
 import { VideoTexture, customNode, property } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
-import { Element2d } from './element2d'
-import type { Element2dProperties } from './element2d'
+import { Element2D } from './element2D'
+import type { Element2DProperties } from './element2D'
 
-export interface VideoProperties extends Element2dProperties {
+export interface Video2DProperties extends Element2DProperties {
   src?: string
 }
 
-@customNode('video')
-export class Video extends Element2d {
-  @property() src = ''
+@customNode('Video')
+export class Video2D extends Element2D {
+  @property({ default: '' }) src!: string
 
+  get texture() { return this._src }
+
+  protected _wait = Promise.resolve()
   protected _src?: VideoTexture
 
-  constructor(properties: VideoProperties = {}) {
+  constructor(properties?: Video2DProperties) {
     super()
-    this.setProperties(properties)
+    properties && this.setProperties(properties)
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
@@ -24,12 +27,14 @@ export class Video extends Element2d {
 
     switch (key) {
       case 'src':
-        this._loadSrc(value)
+        this._wait = this._load(value)
         break
     }
   }
 
-  protected async _loadSrc(src: string): Promise<void> {
+  waitLoad(): Promise<void> { return this._wait }
+
+  protected async _load(src: string): Promise<void> {
     const texture = await Assets.load(src)
     if (texture instanceof VideoTexture) {
       this._src = texture
@@ -37,11 +42,11 @@ export class Video extends Element2d {
         this.width = this._src.width
         this.height = this._src.height
       }
-      this._requestRedraw()
+      this.requestRedraw()
     }
   }
 
-  protected _drawSrc() {
+  protected override _drawContent() {
     const src = this._src
     if (src) {
       this._context.texture = src
@@ -50,15 +55,11 @@ export class Video extends Element2d {
         this.height! / src.height,
       )
     }
-  }
-
-  protected override _drawFill() {
-    this._drawSrc()
-    super._drawFill()
+    super._drawContent()
   }
 
   protected _updateVideoCurrentTime(): void {
-    let currentTime = (this._tree?.timeline.currentTime ?? 0) - this.visibleStartTime
+    let currentTime = this.visibleRelativeTime
     if (currentTime < 0) return
 
     const texture = this._src
@@ -79,7 +80,7 @@ export class Video extends Element2d {
   }
 
   protected override _process(delta: number) {
-    if (this.isVisible()) {
+    if (this.isRenderable()) {
       this._updateVideoCurrentTime()
     }
 

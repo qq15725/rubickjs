@@ -15,6 +15,7 @@ export class Transform2D extends Matrix3 {
   protected _sy = 1
   protected _translateX = 0
   protected _translateY = 0
+  protected _translateZ = 1
   protected _scaleX = 1
   protected _scaleY = 1
   protected _skewX = 0
@@ -66,11 +67,12 @@ export class Transform2D extends Matrix3 {
     const d = this._sy * this._scaleY
     const tx = this._translateX
     const ty = this._translateY
+    const tz = this._translateZ
     const array = this._array
     this._array = [
       a, c, tx,
       b, d, ty,
-      array[6], array[7], array[8],
+      array[6], array[7], tz,
     ]
     this.dirtyId++
   }
@@ -79,6 +81,7 @@ export class Transform2D extends Matrix3 {
     const [
       a, c, tx,
       b, d, ty,
+      ,, tz,
     ] = this._array
     const skewX = -Math.atan2(-c, d)
     const skewY = Math.atan2(b, a)
@@ -95,15 +98,9 @@ export class Transform2D extends Matrix3 {
     this._scaleY = Math.sqrt((c * c) + (d * d))
     this._translateX = tx
     this._translateY = ty
+    this._translateZ = tz
     this.dirtyId++
   }
-
-  translateX(x: number): this { return this.translate(x, this._translateY) }
-  translateY(y: number): this { return this.translate(this._translateX, y) }
-  scaleX(x: number): this { return this.scale(x, this._scaleY) }
-  scaleY(y: number): this { return this.scale(this._scaleX, y) }
-  skewX(x: number): this { return this.skew(x, this._skewY) }
-  skewY(y: number): this { return this.skew(this._skewX, y) }
 
   skew(x: number, y: number): this {
     this._skewX = x
@@ -113,25 +110,79 @@ export class Transform2D extends Matrix3 {
     return this
   }
 
-  translate(x: number, y: number): this {
+  skewX(x: number): this { return this.skew(x, this._skewY) }
+  skewY(y: number): this { return this.skew(this._skewX, y) }
+
+  translate(x: number, y: number, z = 1): this {
     this._translateX = x
     this._translateY = y
+    this._translateZ = z
     this._requestUpdateArray()
     return this
   }
 
-  scale(x: number, y: number): this {
+  translateX(x: number): this { return this.translate(x, this._translateY) }
+  translateY(y: number): this { return this.translate(this._translateX, y) }
+  translateZ(z: number): this { return this.translate(this._translateX, this._translateY, z) }
+  translate3d(x: number, y: number, z: number): this { return this.translate(x, y, z) }
+
+  scale(x: number, y: number, _z = 1): this {
     this._scaleX = x
     this._scaleY = y
     this._requestUpdateArray()
     return this
   }
 
+  scaleX(x: number): this { return this.scale(x, this._scaleY) }
+  scaleY(y: number): this { return this.scale(this._scaleX, y) }
+  scale3d(x: number, y: number, z: number): this { return this.scale(x, y, z) }
+
   rotate(rad: number): this {
     this._rotate = rad
     this._updateSkew()
     this._requestUpdateArray()
     return this
+  }
+
+  rotateX(x: number): this { return this.scaleY(this._rotateToScale(x)) }
+  rotateY(y: number): this { return this.scaleX(this._rotateToScale(y)) }
+  rotateZ(z: number): this { return this.rotate(z) }
+  rotate3d(x: number, y: number, z: number, rad: number): this {
+    const [rx, ry, rz] = this._rotate3d(x, y, z, rad)
+    rx && (this.rotateX(rx))
+    ry && (this.rotateY(ry))
+    rz && (this.rotateZ(rz))
+    return this
+  }
+
+  protected _rotateToScale(rad: number) {
+    const val = rad / PI_2
+    return val <= 0.5
+      ? val * -4 + 1
+      : (val - 1) * 4 + 1
+  }
+
+  protected _rotate3d(x: number, y: number, z: number, rad: number) {
+    if (x === 1 && y === 0 && z === 0) {
+      return [rad, 0, 0]
+    } else if (x === 0 && y === 1 && z === 0) {
+      return [0, rad, 0]
+    } else if (x === 0 && y === 0) {
+      return [0, 0, rad]
+    } else {
+      const cos = Math.cos(rad)
+      const sin = Math.sin(rad)
+      const m11 = cos + x * x * (1 - cos)
+      const m12 = x * y * (1 - cos) - z * sin
+      const m13 = x * z * (1 - cos) + y * sin
+      const m22 = cos + y * y * (1 - cos)
+      const m23 = y * z * (1 - cos) - x * sin
+      const m33 = cos + z * z * (1 - cos)
+      const rotateX = -Math.atan2(-m23, m22)
+      const rotateY = -Math.atan2(m13, Math.sqrt(m23 * m23 + m33 * m33))
+      const rotateZ = -Math.atan2(-m12, m11)
+      return [rotateX, rotateY, rotateZ]
+    }
   }
 
   applyToPoint(x: number, y: number): Array<number> {

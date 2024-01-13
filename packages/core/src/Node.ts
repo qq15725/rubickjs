@@ -1,12 +1,12 @@
 import { clamp } from '@rubickjs/math'
-import { property } from './decorators'
+import { customNode, property } from './decorators'
 import { ReactiveTarget } from './ReactiveTarget'
 import type { SceneTree } from './SceneTree'
 import type { Maskable, WebGLRenderer } from '@rubickjs/renderer'
 import type { UIInputEvent } from '@rubickjs/input'
 
 export enum InternalMode {
-  DISABLED = 0,
+  DEFAULT = 0,
   FRONT = 1,
   BACK = 2,
 }
@@ -16,39 +16,39 @@ export type Visibility = 'visible' | 'hidden'
 export interface NodeProperties {
   name?: string
   visibility?: Visibility
+  visibleStartTime?: number
+  visibleDuration?: number
 }
 
+@customNode('node')
 export class Node extends ReactiveTarget {
-  readonly tagName!: string
+  protected _tagName?: string
+  get tagName() { return this._tagName ?? 'unknown' }
 
-  @property() name!: string
+  @property() name = `${ this.tagName }:${ String(this.instanceId) }`
   @property() visibility?: Visibility
   @property() mask?: Maskable
+  @property({ default: 0 }) visibleStartTime!: number
+  @property({ default: Number.MAX_SAFE_INTEGER }) visibleDuration!: number
 
-  /** Visibility */
-  visibleStartTime = 0
-  visibleDuration = Number.MAX_SAFE_INTEGER
+  renderable?: boolean
 
   /** @internal */
   _computedVisibility: Visibility = 'visible'
 
   /** @internal */
-  _internalMode = InternalMode.DISABLED
+  _internalMode = InternalMode.DEFAULT
 
   protected _readyed = false
   protected _tree: SceneTree | null = null
   protected _parent: Node | null = null
   protected _children: Array<Node> = []
 
+  get children(): Array<Node> { return this.getChildren() }
+
   get visibleEndTime(): number { return this.visibleStartTime + this.visibleDuration }
-  get visibleProgress(): number {
-    return clamp(
-      0,
-      ((this._tree?.timeline.currentTime ?? 0) - this.visibleStartTime)
-      / this.visibleDuration,
-      1,
-    )
-  }
+  get visibleRelativeTime(): number { return (this._tree?.timeline.currentTime ?? 0) - this.visibleStartTime }
+  get visibleProgress(): number { return clamp(0, this.visibleRelativeTime / this.visibleDuration, 1) }
 
   get siblingIndex(): number { return this.getIndex() }
   set siblingIndex(toIndex) { this._parent?.moveChild(this, toIndex) }
@@ -60,15 +60,17 @@ export class Node extends ReactiveTarget {
     return children ? children[children.length - 1] : undefined
   }
 
-  constructor(properties: NodeProperties = {}) {
+  constructor(properties?: NodeProperties) {
     super()
-    this.setProperties(properties)
+    properties && this.setProperties(properties)
   }
 
   /** Meta */
   protected _meta = new Map<string, unknown>()
   hasMeta(name: string): boolean { return this._meta.has(name) }
-  getMeta(name: string, defaultVal = null): any { return this._meta.get(name) ?? defaultVal }
+  getMeta<T = any>(name: string): T | undefined
+  getMeta<T = any>(name: string, defaultVal: T): T
+  getMeta(name: string, defaultVal?: any): any { return this._meta.get(name) ?? defaultVal }
   setMeta(name: string, value: any): void { this._meta.set(name, value) }
   deleteMeta(name: string): void { this._meta.delete(name) }
   clearMeta() { this._meta.clear() }
@@ -116,76 +118,12 @@ export class Node extends ReactiveTarget {
     return this
   }
 
-  /** Parent */
-  getParent(): Node | null { return this._parent }
-  /** @internal */
-  _setParent(parent: Node | null): this {
-    if (parent !== this._parent) {
-      this._parent = parent
-      if (parent) {
-        this.notification('parented')
-      } else {
-        this.notification('unparented')
-      }
-    }
-    return this
-  }
-
-  /** Children */
-  getChildren(includeInternal = false): Array<Node> {
-    if (includeInternal) {
-      return this._children
-    }
-    return this._children.filter(child => child._internalMode === InternalMode.DISABLED)
-  }
-
-  getIndex(includeInternal = false) {
-    return this._parent?.getChildren(includeInternal).indexOf(this) ?? 0
-  }
-
-  moveChild(childNode: Node, toIndex: number) {
-    const children = this._children
-    const oldIndex = children.indexOf(childNode)
-
-    let minIndex = children.findIndex(child => {
-      switch (childNode._internalMode) {
-        case InternalMode.DISABLED:
-          return child._internalMode !== InternalMode.FRONT
-        case InternalMode.BACK:
-          return child._internalMode === InternalMode.BACK
-        case InternalMode.FRONT:
-        default:
-          return true
-      }
-    })
-    minIndex = minIndex > -1 ? minIndex : children.length - 1
-
-    let maxIndex = children.slice(minIndex).findIndex(child => {
-      switch (childNode._internalMode) {
-        case InternalMode.FRONT:
-          return child._internalMode !== InternalMode.FRONT
-        case InternalMode.DISABLED:
-          return child._internalMode === InternalMode.BACK
-        case InternalMode.BACK:
-        default:
-          return false
-      }
-    })
-    maxIndex = maxIndex > -1 ? (minIndex + maxIndex) : children.length - 1
-
-    const index = clamp(minIndex, toIndex > -1 ? toIndex : maxIndex, maxIndex)
-    if (index !== oldIndex) {
-      oldIndex > -1 && children.splice(oldIndex, 1)
-      if (index > -1 && index < children.length) {
-        children.splice(index, 0, childNode)
-      } else {
-        children.push(childNode)
-      }
-    }
-  }
-
   isRenderable(): boolean {
-    return (this.constructor as any).renderable && this.isVisible()
+    return (
+      this.renderable !== false
+        && (this.constructor as any).renderable
+    )
+      && this.isVisible()
   }
 
   isVisible(): boolean {
@@ -235,8 +173,15 @@ export class Node extends ReactiveTarget {
         }
 
         if (this.mask instanceof Node) {
-          this.mask._setTree(this._tree)
-          this.mask.notification('process')
+          if (!this.getNode('__$mask')) {
+            this.mask.renderable = false
+            this.addChild(this.mask, InternalMode.FRONT)
+          }
+        } else {
+          const mask = this.getNode('__$mask')
+          if (mask) {
+            this.removeChild(mask)
+          }
         }
 
         for (let len = this._children.length, i = 0; i < len; i++) {
@@ -285,75 +230,147 @@ export class Node extends ReactiveTarget {
     return this._tree?.deltaTime ?? 0
   }
 
+  /** Parent */
+  get parent() { return this._parent }
+  getParent(): Node | null { return this._parent }
+  /** @internal */
+  _setParent(parent: Node | null): this {
+    if (parent !== this._parent) {
+      this._parent = parent
+      this._setTree(parent?._tree ?? null)
+      this.notification(parent ? 'parented' : 'unparented')
+    }
+    return this
+  }
+
+  /** Children */
+  getChildren(includeInternal: boolean | InternalMode = false): Array<Node> {
+    switch (includeInternal) {
+      case true:
+        return this._children
+      case false:
+        return this._children.filter(child => child._internalMode === InternalMode.DEFAULT)
+      default:
+        return this._children.filter(child => child._internalMode === includeInternal)
+    }
+  }
+
+  getIndex(includeInternal: boolean | InternalMode = false) {
+    return this._parent?.getChildren(includeInternal).indexOf(this) ?? 0
+  }
+
   getNode(path: string): Node | undefined {
     return this._children.find(child => child.name === path)
   }
 
-  addChild(node: Node, internal = InternalMode.DISABLED): this {
-    if (this !== node && !node.getParent()) {
-      const children = this.getChildren(true)
-      switch (internal) {
-        case InternalMode.DISABLED: {
-          const index = children.findIndex(child => child._internalMode === InternalMode.BACK)
-          if (index > -1) {
-            children.splice(index, 0, node)
-          } else {
-            children.push(node)
-          }
-          break
-        }
-        case InternalMode.FRONT: {
-          let index = children.findIndex(child => child._internalMode !== InternalMode.FRONT)
-          index = index > -1 ? index + 1 : children.length - 1
+  addSibling(node: Node): this {
+    if (this.is(node) || !this._parent || node.parent) {
+      return this
+    }
+    node._internalMode = this._internalMode
+    this._parent.moveChild(node, this.getIndex(true) + 1)
+    return this
+  }
+
+  addChild(node: Node, internal = InternalMode.DEFAULT): this {
+    if (this.is(node) || node.parent) {
+      return this
+    }
+    const children = this.getChildren(true)
+    switch (internal) {
+      case InternalMode.DEFAULT: {
+        const index = children.findIndex(child => child._internalMode === InternalMode.BACK)
+        if (index > -1) {
           children.splice(index, 0, node)
-          break
-        }
-        case InternalMode.BACK:
+        } else {
           children.push(node)
-          break
+        }
+        break
       }
-      node._internalMode = internal
+      case InternalMode.FRONT: {
+        const index = children.findIndex(child => child._internalMode !== InternalMode.FRONT)
+        if (index > -1) {
+          children.splice(index, 0, node)
+        } else {
+          children.push(node)
+        }
+        break
+      }
+      case InternalMode.BACK:
+        children.push(node)
+        break
+    }
+    node._internalMode = internal
+    node._setParent(this)
+    this.emit('addChild', node)
+    return this
+  }
+
+  moveChild(node: Node, toIndex: number): this {
+    if (this.is(node) || (node.parent && !this.is(node.parent))) {
+      return this
+    }
+    const children = this._children
+    const oldIndex = children.indexOf(node)
+
+    let minIndex = children.findIndex(child => {
+      switch (node._internalMode) {
+        case InternalMode.DEFAULT:
+          return child._internalMode !== InternalMode.FRONT
+        case InternalMode.BACK:
+          return child._internalMode === InternalMode.BACK
+        case InternalMode.FRONT:
+        default:
+          return true
+      }
+    })
+    minIndex = minIndex > -1 ? minIndex : children.length - 1
+
+    let maxIndex = children.slice(minIndex).findIndex(child => {
+      switch (node._internalMode) {
+        case InternalMode.FRONT:
+          return child._internalMode !== InternalMode.FRONT
+        case InternalMode.DEFAULT:
+          return child._internalMode === InternalMode.BACK
+        case InternalMode.BACK:
+        default:
+          return false
+      }
+    })
+    maxIndex = maxIndex > -1 ? (minIndex + maxIndex) : children.length - 1
+
+    const newIndex = clamp(minIndex, toIndex > -1 ? toIndex : maxIndex, maxIndex)
+    if (newIndex !== oldIndex) {
+      if (oldIndex > -1) {
+        children.splice(oldIndex, 1)
+      }
       node._setParent(this)
-      node._setTree(this._tree)
+      if (newIndex > -1 && newIndex < children.length) {
+        children.splice(newIndex, 0, node)
+      } else {
+        children.push(node)
+      }
+      if (oldIndex > -1) {
+        this.emit('moveChild', node, newIndex, oldIndex)
+      } else {
+        this.emit('addChild', node)
+      }
     }
     return this
   }
 
-  addSibling(sibling: Node): this {
-    if (this._parent && !sibling.getParent()) {
-      this._parent._children.splice(
-        this.getIndex(true) + 1,
-        0,
-        sibling,
-      )
-      sibling._internalMode = this._internalMode
-      sibling._setParent(this._parent)
-      sibling._setTree(this._parent._tree)
-    }
-    return this
-  }
-
-  removeChild<T extends Node>(node: T): this {
-    const index = node.getIndex(true)
-    if (node.getParent() === this && index > -1) {
+  removeChild<T extends Node>(childNode: T): this {
+    const index = childNode.getIndex(true)
+    if (this.is(childNode.parent) && index > -1) {
       this._children.splice(index, 1)
-      node._setParent(null)
-      node._setTree(null)
+      childNode._setParent(null)
+      this.emit('removeChild', childNode, index)
     }
     return this
   }
 
-  override toObject(): Record<string, any> {
-    const object: any = {
-      tag: this.tagName,
-      ...super.toObject(),
-    }
-
-    if (this._children.length) {
-      object.children = this._children.map(child => child.toObject())
-    }
-
-    return object
+  is(target: Node | undefined | null): boolean {
+    return Boolean(target && this.instanceId === target.instanceId)
   }
 
   protected _enterTree(): void { /** override */ }

@@ -1,5 +1,5 @@
 import { crossOrigin, isVideoElement } from '@rubickjs/shared'
-import { property } from '../decorators'
+import { protectedProperty } from '../decorators'
 import { GlobalTicker } from '../global'
 import { Texture } from './Texture'
 
@@ -31,14 +31,15 @@ function resolveOptions(options?: VideoTextureOptions): Required<VideoTextureOpt
 }
 
 export class VideoTexture extends Texture<HTMLVideoElement> {
-  @property() autoUpdate = true
-  @property() fps = 0
+  @protectedProperty({ default: true }) autoUpdate!: boolean
+  @protectedProperty({ default: 0 }) fps!: number
 
-  /** List of common video file extensions supported by VideoTexture. */
-  static readonly TYPES = new Set(['mp4', 'm4v', 'webm', 'ogg', 'ogv', 'h264', 'avi', 'mov'])
+  static readonly fileExtensions = new Set([
+    'mp4', 'm4v', 'webm', 'ogg',
+    'ogv', 'h264', 'avi', 'mov',
+  ])
 
-  /** Map of video MIME types that can't be directly derived from file extensions. */
-  static readonly MIME_TYPES = new Map(Object.entries({
+  static readonly mimeTypes = new Map(Object.entries({
     ogv: 'video/ogg',
     mov: 'video/quicktime',
     m4v: 'video/mp4',
@@ -95,7 +96,7 @@ export class VideoTexture extends Texture<HTMLVideoElement> {
         } else if (!src.startsWith('blob:')) {
           const baseSrc = src.split('?').shift()!.toLowerCase()
           const ext = baseSrc.slice(baseSrc.lastIndexOf('.') + 1)
-          mime = mime || VideoTexture.MIME_TYPES.get(ext) || `video/${ ext }`
+          mime = mime || VideoTexture.mimeTypes.get(ext) || `video/${ ext }`
         }
         const sourceElement = document.createElement('source')
         sourceElement.src = src

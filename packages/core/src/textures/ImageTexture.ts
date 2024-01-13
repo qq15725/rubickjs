@@ -18,8 +18,10 @@ function resolveOptions(options?: ImageTextureOptions): Required<ImageTextureOpt
 }
 
 export class ImageTexture extends Texture<HTMLImageElement> {
-  /** List of common image file extensions supported by ImageTexture. */
-  static readonly TYPES = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'svg', 'svg+xml'])
+  static readonly fileExtensions = new Set([
+    'jpg', 'jpeg', 'png', 'webp',
+    'avif', 'svg', 'svg+xml',
+  ])
 
   bitmap?: ImageBitmap
   useBitmap: boolean
@@ -94,11 +96,6 @@ export class ImageTexture extends Texture<HTMLImageElement> {
     return this._loadSource
   }
 
-  /**
-   * Called when we need to convert image into BitmapImage.
-   * Can be called multiple times, real promise is cached inside.
-   * @returns - Cached promise to fill that bitmap
-   */
   genBitmap(): Promise<this> {
     if (this._loadBitmap) {
       return this._loadBitmap
@@ -111,7 +108,9 @@ export class ImageTexture extends Texture<HTMLImageElement> {
     const src = this.source
     const cors = !src.crossOrigin || src.crossOrigin === 'anonymous'
 
-    this._loadBitmap = globalThis.fetch(src.src, { mode: cors ? 'cors' : 'no-cors' })
+    this._loadBitmap = globalThis.fetch(src.src, {
+      mode: cors ? 'cors' : 'no-cors',
+    })
       .then(r => r.blob())
       .then(blob => {
         return globalThis.createImageBitmap(blob, 0, 0, src.width, src.height, {

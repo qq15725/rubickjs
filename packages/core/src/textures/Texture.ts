@@ -1,5 +1,5 @@
 import { isPow2 } from '@rubickjs/shared'
-import { state } from '../decorators'
+import { protectedProperty } from '../decorators'
 import { Resource } from '../Resource'
 import type { WebGLRenderer, WebGLTextureFilterMode, WebGLTextureOptions, WebGLTextureWrapMode } from '@rubickjs/renderer'
 
@@ -20,12 +20,12 @@ export class Texture<T extends TextureSource = TextureSource> extends Resource {
   static get GREEN() { return new this({ width: 1, height: 1, pixels: new Uint8Array([0, 255, 0, 255]) }) }
   static get BLUE() { return new this({ width: 1, height: 1, pixels: new Uint8Array([0, 0, 255, 255]) }) }
 
-  @state() source!: T
-  @state() width = 0
-  @state() height = 0
-  @state() filterMode: TextureFilterMode = 'linear'
-  @state() wrapMode: TextureWrapMode = 'clamp_to_edge'
-  @state() pixelRatio = 1
+  @protectedProperty() source!: T
+  @protectedProperty({ default: 0 }) width!: number
+  @protectedProperty({ default: 0 }) height!: number
+  @protectedProperty({ default: 'linear' }) filterMode!: TextureFilterMode
+  @protectedProperty({ default: 'clamp_to_edge' }) wrapMode!: TextureWrapMode
+  @protectedProperty({ default: 1 }) pixelRatio!: number
 
   protected _isPowerOfTwo = false
   protected _needsUpload = false

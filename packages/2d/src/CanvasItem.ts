@@ -3,9 +3,10 @@ import { Color, ColorMatrix } from '@rubickjs/color'
 import { Canvas } from '@rubickjs/canvas'
 import { clamp } from '@rubickjs/math'
 import { PI_2, parseCssFunctions } from '@rubickjs/shared'
+import type { ColorValue } from '@rubickjs/color'
 import type { WebGLBlendMode, WebGLRenderer } from '@rubickjs/renderer'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
-import type { NodeProperties, PropertyValues } from '@rubickjs/core'
+import type { NodeProperties } from '@rubickjs/core'
 
 export type CanvasItemBlendMode = WebGLBlendMode
 
@@ -19,14 +20,14 @@ export interface CanvasItemProperties extends NodeProperties {
 
 @customNode('CanvasItem')
 export class CanvasItem extends Node {
-  @property() opacity = 1
-  @property() backgroundColor = '#00000000'
-  @property() tint = '#FFFFFF'
+  @property({ default: 1 }) opacity!: number
+  @property() backgroundColor?: ColorValue
+  @property() tint?: ColorValue
   @property() filter?: string
   @property() blendMode?: CanvasItemBlendMode
 
   /** @internal */
-  _opacity = this.opacity
+  _opacity = 1
   /** @internal */
   _colorMatrix = new ColorMatrix()
 
@@ -43,49 +44,47 @@ export class CanvasItem extends Node {
   protected _layoutedBatchables: Array<CanvasBatchable2D> = []
   protected _batchables: Array<CanvasBatchable2D> = []
 
-  constructor(properties: CanvasItemProperties = {}) {
+  constructor(properties?: CanvasItemProperties) {
     super()
-    this.setProperties(properties)
+    properties && this.setProperties(properties)
   }
 
-  protected override _onUpdate(changed: PropertyValues) {
-    super._onUpdate(changed)
+  protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
+    super._onUpdateProperty(key, value, oldValue)
 
-    if (changed.has('blendMode')) {
-      this._requestRepaint()
-    }
-
-    if (changed.has('backgroundColor')) {
-      this._backgroundColor.value = this.backgroundColor
-      this._requestRepaint()
-    }
-
-    if (changed.has('tint')) {
-      this._tint.value = this.tint
-      this._requestRepaint()
-    }
-
-    if (changed.has('opacity')) {
-      this._computeOpacity()
-      this._requestRepaint()
-    }
-
-    if (changed.has('filter')) {
-      this._computeFilter()
-      this._requestRepaint()
+    switch (key) {
+      case 'blendMode':
+        this.requestRepaint()
+        break
+      case 'backgroundColor':
+        this._backgroundColor.value = value || 0x00000000
+        this.requestRepaint()
+        break
+      case 'tint':
+        this._tint.value = value || 0xFFFFFF
+        this.requestRepaint()
+        break
+      case 'opacity':
+        this._updateOpacity()
+        this.requestRepaint()
+        break
+      case 'filter':
+        this._updateFilter()
+        this.requestRepaint()
+        break
     }
   }
 
-  protected _computeOpacity(): void {
-    this._opacity = clamp(0, this.opacity, 1)
+  protected _updateOpacity(): void {
+    this._opacity = clamp(0, this.opacity ?? 1, 1)
       * ((this._parent as CanvasItem)?._opacity ?? 1)
   }
 
-  protected _computeFilter(): void {
+  protected _updateFilter(): void {
     const funs = parseCssFunctions(this.filter ?? '')
     const matrix = this._colorMatrix.identity()
     funs.forEach(({ name, args }) => {
-      const values = args.map(arg => arg.normalized)
+      const values = args.map(arg => arg.normalizedIntValue)
       switch (name) {
         case 'hue-rotate':
         case 'hueRotate':
@@ -116,15 +115,20 @@ export class CanvasItem extends Node {
     })
   }
 
-  protected _requestRedraw(): void { this._needsRedraw = true }
-  protected _requestReflow(): void { this._needsReflow = true }
-  protected _requestRepaint(): void { this._needsRepaint = true }
+  requestRedraw(): void { this._needsRedraw = true }
+  requestReflow(): void { this._needsReflow = true }
+  requestRepaint(): void { this._needsRepaint = true }
 
   protected override _process(delta: number): void {
+    if (!this.isRenderable()) {
+      super._process(delta)
+      return
+    }
+
     const parentOpacity = (this._parent as CanvasItem)?._opacity
     if (parentOpacity !== this._parentOpacity) {
       this._parentOpacity = parentOpacity
-      this._computeOpacity()
+      this._updateOpacity()
     }
 
     super._process(delta)
@@ -163,7 +167,7 @@ export class CanvasItem extends Node {
       return {
         ...batchable,
         backgroundColor: this._backgroundColor.abgr,
-        tint: (this._opacity * 255 << 24) + this._tint.bgr,
+        tint: this._tint.toArgb(this._opacity, true),
         colorMatrix: this._colorMatrix.toMatrix4().toArray(true),
         colorMatrixOffset: this._colorMatrix.toVector4().toArray(),
         blendMode: this.blendMode,

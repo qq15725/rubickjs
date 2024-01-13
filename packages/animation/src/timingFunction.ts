@@ -89,3 +89,5 @@ export const timingFunctions = {
   easeOut,
   easeInOut,
 }
+
+export type TimingFunctions = typeof timingFunctions

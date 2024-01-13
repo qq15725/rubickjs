@@ -1,23 +1,21 @@
 import { Resource } from '../Resource'
-import { property } from '../decorators'
+import { protectedProperty } from '../decorators'
 import type { WebGLBufferOptions, WebGLRenderer } from '@rubickjs/renderer'
 
-export interface IndexBufferOptions {
+export interface IndexBufferProperties {
   data?: Uint16Array | null
   dynamic?: boolean
 }
 
 export class IndexBuffer extends Resource {
-  @property() data: Uint16Array | null
-  @property() dynamic: boolean
+  @protectedProperty({ default: null }) data!: Uint16Array | null
+  @protectedProperty({ default: false }) dynamic!: boolean
 
   needsUpload = false
 
-  constructor(options: IndexBufferOptions = {}) {
+  constructor(properties?: IndexBufferProperties) {
     super()
-
-    this.data = options?.data ?? null
-    this.dynamic = options?.dynamic ?? false
+    properties && this.setProperties(properties)
   }
 
   /** @internal */

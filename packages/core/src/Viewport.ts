@@ -11,10 +11,10 @@ import type { WebGLFramebufferOptions, WebGLRenderer } from '@rubickjs/renderer'
   renderable: true,
 })
 export class Viewport extends Node {
-  @property() x = 0
-  @property() y = 0
-  @property() width = 0
-  @property() height = 0
+  @property({ default: 0 }) x!: number
+  @property({ default: 0 }) y!: number
+  @property({ default: 0 }) width!: number
+  @property({ default: 0 }) height!: number
 
   protected _projection = new Projection2D()
   protected _framebufferIndex = 0

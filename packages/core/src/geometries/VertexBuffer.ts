@@ -1,23 +1,21 @@
 import { Resource } from '../Resource'
-import { property } from '../decorators'
+import { protectedProperty } from '../decorators'
 import type { WebGLBufferOptions, WebGLRenderer } from '@rubickjs/renderer'
 
-export interface VertexBufferOptions {
+export interface VertexBufferProperties {
   data?: BufferSource | null
   dynamic?: boolean
 }
 
 export class VertexBuffer extends Resource {
-  @property() data: BufferSource | null
-  @property() dynamic: boolean
+  @protectedProperty({ default: null }) data!: BufferSource | null
+  @protectedProperty({ default: false }) dynamic!: boolean
 
   needsUpload = false
 
-  constructor(options: VertexBufferOptions = {}) {
+  constructor(properties?: VertexBufferProperties) {
     super()
-
-    this.data = options.data ?? null
-    this.dynamic = options.dynamic ?? false
+    properties && this.setProperties(properties)
   }
 
   /** @internal */

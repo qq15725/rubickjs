@@ -8,109 +8,119 @@ const JSCompiler_renameProperty = <P extends PropertyKey>(
 ): P => prop
 
 export interface PropertyDeclaration {
-  readonly proxiedKey?: string
-  readonly state?: boolean
+  readonly default?: any
+  readonly protected?: boolean
+  readonly alias?: string
 }
-
-export type PropertyValues<T = any> = T extends object
-  ? PropertyValueMap<T>
-  : Map<PropertyKey, unknown>
-
-export interface PropertyValueMap<T> extends Map<PropertyKey, unknown> {
-  get<K extends keyof T>(k: K): T[K] | undefined
-  set<K extends keyof T>(key: K, value: T[K]): this
-  has<K extends keyof T>(k: K): boolean
-  delete<K extends keyof T>(k: K): boolean
-}
-
-const {
-  is,
-  defineProperty,
-  getOwnPropertyDescriptor,
-  getPrototypeOf,
-} = Object
 
 export class ReactiveTarget extends EventTarget {
-  protected static _finalized?: true
-  static targetProperties = new Map<PropertyKey, PropertyDeclaration>()
+  static _finalized?: true
+  static propertyDeclarations = new Map<PropertyKey, PropertyDeclaration>()
 
-  static createProperty(
-    name: PropertyKey,
-    options: PropertyDeclaration = {},
-  ): void {
+  static defineProperty(name: PropertyKey, declaration: PropertyDeclaration = {}): void {
     this._prepare()
-    this.targetProperties.set(name, options)
-    const descriptor = this._getPropertyDescriptor(
-      name,
-      options?.proxiedKey ?? Symbol.for(String(name)),
-    )
-    if (descriptor !== undefined) {
-      defineProperty(this.prototype, name, descriptor)
+    this.propertyDeclarations.set(name, declaration)
+    const {
+      default: defaultValue,
+      alias,
+    } = declaration
+    let descriptor = Object.getOwnPropertyDescriptor(this.prototype, name)
+    if (!descriptor) {
+      const key = alias ?? Symbol.for(String(name))
+      descriptor = {
+        get(this: ReactiveTarget) { return (this as any)[key] },
+        set(this: ReactiveTarget, v: unknown) { (this as any)[key] = v },
+      }
     }
-  }
-
-  protected static _getPropertyDescriptor(
-    name: PropertyKey,
-    key: string | symbol,
-  ): PropertyDescriptor | undefined {
-    const { get, set } = getOwnPropertyDescriptor(this.prototype, name) ?? {
-      get(this: ReactiveTarget) { return (this as any)[key] },
-      set(this: ReactiveTarget, v: unknown) { (this as any)[key] = v },
-    }
-    return {
-      get(this: ReactiveTarget) { return get?.call(this) },
+    Object.defineProperty(this.prototype, name, {
+      get(this: ReactiveTarget) { return descriptor!.get?.call(this) ?? defaultValue },
       set(this: ReactiveTarget, value: unknown) {
-        const oldValue = get?.call(this)
-        set!.call(this, value)
-        this._requestUpdate(name, oldValue)
+        const oldValue = descriptor!.get?.call(this) ?? defaultValue
+        descriptor!.set?.call(this, value)
+        this.requestUpdate(name, oldValue, declaration)
       },
       configurable: true,
       enumerable: true,
-    }
+    })
   }
 
   private static _prepare() {
     // eslint-disable-next-line no-prototype-builtins
-    if (this.hasOwnProperty(JSCompiler_renameProperty('targetProperties', this))) return
-    const superCtor = getPrototypeOf(this) as typeof ReactiveTarget
-    superCtor._finalize()
-    this.targetProperties = new Map(superCtor.targetProperties)
+    if (!this.hasOwnProperty(JSCompiler_renameProperty('propertyDeclarations', this))) {
+      const superCtor = Object.getPrototypeOf(this) as typeof ReactiveTarget
+      // eslint-disable-next-line no-prototype-builtins
+      if (!superCtor.hasOwnProperty(JSCompiler_renameProperty('_finalized', this))) {
+        superCtor._finalized = true
+        superCtor._prepare()
+      }
+      this.propertyDeclarations = new Map(superCtor.propertyDeclarations)
+    }
   }
 
-  protected static _finalize() {
-    // eslint-disable-next-line no-prototype-builtins
-    if (this.hasOwnProperty(JSCompiler_renameProperty('_finalized', this))) return
-    this._finalized = true
-    this._prepare()
-  }
-
-  protected _changedProperties: PropertyValues = new Map()
+  protected _defaultProperties?: Record<PropertyKey, any>
+  protected _changedProperties = new Map<PropertyKey, unknown>()
   protected _updatePromise = Promise.resolve()
   protected _isUpdatePending = false
-  protected _isFirstUpdate = true
 
   isDirty(key: string): boolean {
     return this._changedProperties.has(key)
   }
 
-  setProperties(properties: Record<string, any>): this {
-    const target = this.constructor as typeof ReactiveTarget
-    for (const name in properties) {
-      if (target.targetProperties.has(name)) {
-        (this as any)[name] = properties[name]
+  getPropertyDeclarations(): Map<PropertyKey, PropertyDeclaration> {
+    return (this.constructor as typeof ReactiveTarget).propertyDeclarations
+  }
+
+  getPropertyDeclaration(key: PropertyKey): PropertyDeclaration | undefined {
+    return this.getPropertyDeclarations().get(key)
+  }
+
+  getDefaultProperties(): Record<PropertyKey, any> {
+    if (!this._defaultProperties) {
+      this._defaultProperties = {}
+      for (const [name, property] of this.getPropertyDeclarations()) {
+        if (!property.protected && !property.alias) {
+          this._defaultProperties[name] = property.default
+        }
+      }
+    }
+    return this._defaultProperties
+  }
+
+  getProperty(key: PropertyKey): any | undefined {
+    return (this as any)[key]
+  }
+
+  setProperty(key: PropertyKey, value: any): this {
+    (this as any)[key] = value
+    return this
+  }
+
+  getProperties(keys?: Array<PropertyKey>): Record<PropertyKey, any> {
+    const properties: Record<PropertyKey, any> = {}
+    for (const [name, property] of this.getPropertyDeclarations()) {
+      if (!property.protected && !property.alias && (!keys || keys.includes(name))) {
+        properties[name] = this.getProperty(name)
+      }
+    }
+    return properties
+  }
+
+  setProperties(properties: Record<PropertyKey, any>): this {
+    for (const [name] of this.getPropertyDeclarations()) {
+      if (name in properties) {
+        this.setProperty(name, properties[name])
       }
     }
     return this
   }
 
-  protected _requestUpdate(key?: PropertyKey, oldValue?: unknown): void {
+  requestUpdate(key?: PropertyKey, oldValue?: unknown, declaration?: PropertyDeclaration): void {
     if (key !== undefined) {
       const newValue = this[key as keyof this]
-      if (!is(newValue, oldValue)) {
+      if (!Object.is(newValue, oldValue)) {
         this._changedProperties.set(key, oldValue)
-        if (!this._isFirstUpdate) {
-          this._onUpdateProperty(key, newValue, oldValue)
-        }
+        this._onUpdateProperty(key, newValue, oldValue)
+        this.emit('updateProperty', key, newValue, oldValue, declaration ?? this.getPropertyDeclaration(key))
       } else {
         return
       }
@@ -133,36 +143,11 @@ export class ReactiveTarget extends EventTarget {
 
   protected _performUpdate() {
     if (!this._isUpdatePending) return
-    if (this._isFirstUpdate) {
-      this._changedProperties.forEach((oldValue, key) => {
-        this._onUpdateProperty(key, (this as any)[key], oldValue)
-      })
-    } else {
-      this._isFirstUpdate = false
-    }
     this._onUpdate(this._changedProperties)
     this._changedProperties = new Map()
     this._isUpdatePending = false
   }
 
-  protected _onUpdate(_changed: PropertyValues): void { /** override */ }
+  protected _onUpdate(_changed: Map<PropertyKey, unknown>): void { /** override */ }
   protected _onUpdateProperty(_key: PropertyKey, _value: any, _oldValue: any): void { /** override */ }
-
-  toObject(): Record<string, unknown> {
-    const properties = (this.constructor as typeof ReactiveTarget).targetProperties
-    const obj: Record<string, unknown> = {}
-    properties.forEach((property, key) => {
-      if (typeof key === 'string' && !property.state && !property.proxiedKey) {
-        obj[key] = (this as any)[key]
-      }
-    })
-    return obj
-  }
-
-  toJSON(
-    replacer?: (this: any, key: string, value: any) => any,
-    space?: string | number,
-  ): string {
-    return JSON.stringify(this.toObject(), replacer, space)
-  }
 }

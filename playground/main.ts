@@ -1,4 +1,4 @@
-import { Animation, Effect, Engine, Graphics2d, Image, Node2d, Text } from 'rubickjs'
+import { Animation, Effect, Engine, Graphics2D, Image2D, Node2D, Text2D } from 'rubickjs'
 
 const engine = new Engine()
 
@@ -9,7 +9,7 @@ view.style.height = '100vh'
 document.body.append(view)
 
 // text
-const text = new Text({
+const text = new Text2D({
   text: [
     {
       fragments: [
@@ -30,10 +30,10 @@ const text = new Text({
 })
 
 engine.root.addChild(text)
-engine.root.addChild(new Text({ text: 'Text12312211221' }))
+engine.root.addChild(new Text2D({ text: 'Text12312211221' }))
 
 // sprite
-const bunny = new Image({
+const bunny = new Image2D({
   src: 'https://pixijs.com/assets/bunny.png',
   backgroundColor: '#0000FF',
   borderRadius: 30,
@@ -41,12 +41,12 @@ const bunny = new Image({
 engine.root.addChild(bunny)
 
 // group
-const group = new Node2d({
+const group = new Node2D({
   left: 200,
   top: 100,
 })
 for (let i = 0; i < 5; i++) {
-  const item = new Image({
+  const item = new Image2D({
     src: 'https://pixijs.com/assets/bunny.png',
   })
   item.x = i * 10
@@ -86,7 +86,7 @@ engine.timeline.on('update', (_, delta) => {
   group.rotate += 0.01 * delta
 })
 
-engine.root.addChild(new Graphics2d({ backgroundColor: '#000000' }).drawRect(200, 200, 300, 300))
+engine.root.addChild(new Graphics2D({ backgroundColor: '#000000' }).drawRect(200, 200, 300, 300))
 
 engine.start()
 

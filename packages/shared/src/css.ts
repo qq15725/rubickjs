@@ -1,64 +1,145 @@
 import { PI_2 } from './utils'
 
-const FUNCTIONS_RE = /([\w-]+)\((.+?)\)/g
-const ARGS_RE = /([^,]+)/g
-const ARG_RE = /([-\d.]+)(.*)/
-
-export function parseCssProperty(property: string) {
-  const functions = parseCssFunctions(property)
-  return functions.length
-    ? functions
-    : parseArg(property)
+export interface CssFunctionArg {
+  unit: string | null
+  value: string
+  intValue: number
+  normalizedIntValue: number
+  normalizedDefaultIntValue: number
 }
 
-export function parseCssFunctions(value: string) {
+export interface CssFunction {
+  name: string
+  args: Array<CssFunctionArg>
+}
+
+interface ParseArgumentContext {
+  index?: number
+  fontSize?: number
+  width?: number
+  height?: number
+}
+
+const FUNCTIONS_RE = /([\w-]+)\((.+?)\)/g
+const ARGS_RE = /([^,]+)/g
+const ARG_RE = /([-e.\d]+)(.*)/
+
+export function getDefaultCssPropertyValue<T extends CssFunctionArg | Array<CssFunction>>(
+  value: T,
+): T {
+  if (Array.isArray(value)) {
+    return value.map(func => {
+      return {
+        name: func.name,
+        args: func.args.map(arg => {
+          return {
+            ...arg,
+            normalizedIntValue: arg.normalizedDefaultIntValue,
+          }
+        }),
+      }
+    }) as any
+  } else {
+    return {
+      ...value,
+      normalizedIntValue: value.normalizedDefaultIntValue,
+    }
+  }
+}
+
+export function parseCssProperty(
+  name: string,
+  propertyValue: string,
+  context: ParseArgumentContext = {},
+): CssFunctionArg | Array<CssFunction> {
+  const functions = parseCssFunctions(propertyValue, context)
+  return functions.length
+    ? functions
+    : parseArgument(name, propertyValue, context)
+}
+
+export function parseCssFunctions(
+  propertyValue: string,
+  context: ParseArgumentContext = {},
+): Array<CssFunction> {
   const functions = []
   let match
   // eslint-disable-next-line no-cond-assign
-  while ((match = FUNCTIONS_RE.exec(value)) !== null) {
-    const [, name, args] = match
+  while ((match = FUNCTIONS_RE.exec(propertyValue)) !== null) {
+    const [, name, value] = match
     if (name) {
       functions.push({
         name,
-        args: parseArgs(args),
+        args: parseArguments(name, value, context),
       })
     }
   }
   return functions
 }
 
-function parseArgs(args: string) {
+function parseArguments(name: string, value: string, context: ParseArgumentContext = {}): Array<CssFunctionArg> {
   const values = []
   let match
+  let i = 0
   // eslint-disable-next-line no-cond-assign
-  while ((match = ARGS_RE.exec(args)) !== null) {
-    values.push(parseArg(match[0]))
+  while ((match = ARGS_RE.exec(value)) !== null) {
+    values.push(
+      parseArgument(name, match[0], {
+        ...context,
+        index: i++,
+      }),
+    )
   }
   return values
 }
 
-function parseArg(arg: string) {
-  const matched = arg.match(ARG_RE)
-  const value = Number(matched?.[1])
-  const unit = matched?.[2]
-  let normalized: number
-  switch (unit) {
+function parseArgument(name: string, value: string, context: ParseArgumentContext = {}): CssFunctionArg {
+  const { width = 1, height = 1, index = 0 } = context
+  const matched = value.match(ARG_RE)
+  const result = {
+    unit: matched?.[2] ?? null,
+    value,
+    intValue: Number(matched?.[1]),
+    normalizedIntValue: 0,
+    normalizedDefaultIntValue: 0,
+  }
+
+  switch (name) {
+    case 'scale':
+    case 'scaleX':
+    case 'scaleY':
+    case 'scale3d':
+      result.normalizedDefaultIntValue = 1
+      break
+  }
+
+  switch (result.unit) {
     case '%':
-      normalized = value / 100
+      result.normalizedIntValue = result.intValue / 100
       break
     case 'rad':
-      normalized = value / PI_2
+      result.normalizedIntValue = result.intValue / PI_2
       break
     case 'deg':
-      normalized = value / 360
+      result.normalizedIntValue = result.intValue / 360
+      break
+    case 'px':
+      switch (index) {
+        case 0:
+          result.normalizedIntValue = result.intValue / width
+          break
+        case 1:
+          result.normalizedIntValue = result.intValue / height
+          break
+      }
       break
     case 'turn':
-    case 'px': // div width or height
     case 'em': // div fontSize
     case 'rem': // div fontSize
     default:
-      normalized = value
+      result.normalizedIntValue = result.intValue
       break
   }
-  return { value, unit, normalized }
+
+  return result
 }

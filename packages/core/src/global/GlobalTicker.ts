@@ -44,8 +44,10 @@ export class GlobalTicker {
   }
 
   static start(): void {
-    this._currentTime = performance.now()
-    this._requestId = requestAnimationFrame(time => this._update(time))
+    if ('requestAnimationFrame' in globalThis) {
+      this._currentTime = performance.now()
+      this._requestId = requestAnimationFrame(time => this._update(time))
+    }
   }
 
   static stop(): void {

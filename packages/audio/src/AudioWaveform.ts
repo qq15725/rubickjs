@@ -1,18 +1,18 @@
-import { Element2d } from '@rubickjs/2d'
+import { Element2D } from '@rubickjs/2d'
 import { IN_BROWSER } from '@rubickjs/shared'
 import { Texture, customNode, property } from '@rubickjs/core'
 import { Transform2D } from '@rubickjs/math'
 import { WebAudioContext } from './web'
-import type { Element2dProperties } from '@rubickjs/2d'
+import type { Element2DProperties } from '@rubickjs/2d'
 
-export interface AudioWaveformOptions extends Element2dProperties {
+export interface AudioWaveformOptions extends Element2DProperties {
   src?: string
   gap?: number
   color?: string
 }
 
 @customNode('audioWaveform')
-export class AudioWaveform extends Element2d {
+export class AudioWaveform extends Element2D {
   @property() src?: string
   @property() gap = 0
   @property() color = '#000000'

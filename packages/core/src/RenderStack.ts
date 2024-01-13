@@ -11,24 +11,6 @@ export class RenderStack {
   currentCall?: RenderCall
   calls: Array<RenderCall> = []
 
-  compose(fns: Array<RenderCall['fn']>) {
-    return <RenderCall['fn']> function (renderer, next) {
-      let index = -1
-      ;(function dispatch(i: number): Promise<void> {
-        if (i <= index) return Promise.reject(new Error('next() called multiple times'))
-        index = i
-        let fn = fns[i]
-        if (i === fns.length) fn = next
-        if (!fn) return Promise.resolve()
-        try {
-          return Promise.resolve(fn(renderer, dispatch.bind(null, i + 1)))
-        } catch (err) {
-          return Promise.reject(err)
-        }
-      })(0)
-    }
-  }
-
   push(renderable: Node): RenderCall {
     const currentCall = this.currentCall
 
@@ -44,21 +26,15 @@ export class RenderStack {
 
     calls.push(call)
 
-    if (currentCall) {
-      currentCall.fn = this.compose([
-        currentCall.renderable.render.bind(currentCall.renderable),
-        ...calls.map(call => call.fn),
-      ])
-    }
-
     return call
   }
 
   render(renderer: WebGLRenderer) {
-    const call = this.compose(this.calls.map(call => call.fn))
-    this.calls = []
-    call(renderer, () => {
-      //
+    this.calls.forEach(function render(call: RenderCall) {
+      call.fn(renderer, () => {
+        call.calls.forEach(render)
+      })
     })
+    this.calls = []
   }
 }
