@@ -1,8 +1,8 @@
 import { Texture, customNode, property } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
-import { Node2D } from './node2D'
-import type { Node2DProperties } from './node2D'
+import { Node2D } from './Node2D'
+import type { Node2DProperties } from './Node2D'
 
 export interface Element2DProperties extends Node2DProperties {
   backgroundImage?: string

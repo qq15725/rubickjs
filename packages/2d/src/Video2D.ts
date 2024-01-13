@@ -1,8 +1,8 @@
 import { VideoTexture, customNode, property } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
-import { Element2D } from './element2D'
-import type { Element2DProperties } from './element2D'
+import { Element2D } from './Element2D'
+import type { Element2DProperties } from './Element2D'
 
 export interface Video2DProperties extends Element2DProperties {
   src?: string

@@ -1,7 +1,7 @@
 import { InternalMode, Texture, customNode, property } from '@rubickjs/core'
 import { Transform2D } from '@rubickjs/math'
-import { Element2D } from './element2D'
-import type { Element2DProperties } from './element2D'
+import { Element2D } from './Element2D'
+import type { Element2DProperties } from './Element2D'
 
 export type FontWeight = 'normal' | 'bold' | 'lighter' | 'bolder' | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
 export type FontStyle = 'normal' | 'italic' | 'oblique' | `oblique ${ string }`
