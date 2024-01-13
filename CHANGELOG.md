@@ -1,3 +1,28 @@
+## [0.0.1-beta.3](https://github.com/qq15725/rubickjs/compare/v0.0.1-beta.2...v0.0.1-beta.3) (2024-01-13)
+
+
+### Bug Fixes
+
+* .gitignore ([b9f9156](https://github.com/qq15725/rubickjs/commit/b9f915634adf31bb9791a7ab8ae49ecab61ad659))
+* eslint ([ad2eb45](https://github.com/qq15725/rubickjs/commit/ad2eb45600007535fd873ef36b94f41d08467d4b))
+* eslint ([5251a5e](https://github.com/qq15725/rubickjs/commit/5251a5e92da3ab120e3bd7f807ae23ed79a8d493))
+* typo ([a31733b](https://github.com/qq15725/rubickjs/commit/a31733b44e3400bb14cc3ba2a2561fe0e73089a1))
+
+
+### Features
+
+* defineProxiedProp ([261e5d1](https://github.com/qq15725/rubickjs/commit/261e5d17259affd8cb8b0ab0d4bbb4d72f6ad417))
+* defineProxiedProp ([28f87bf](https://github.com/qq15725/rubickjs/commit/28f87bf26ee13413ddfcfab2bfc38ee4cbd093e7))
+* options rename to properties ([685de3d](https://github.com/qq15725/rubickjs/commit/685de3dd7b2664001468809051abc74bea897ba1))
+* pnpm-lock ([5dcf8b6](https://github.com/qq15725/rubickjs/commit/5dcf8b6a3581c12dcdced657c8be5a499d8d4d71))
+* support text fragment style ([fbded08](https://github.com/qq15725/rubickjs/commit/fbded08b9c3eae784d8393b107fdc7c46154f3b1))
+* update ([ab90a60](https://github.com/qq15725/rubickjs/commit/ab90a6076abf3d1c96f723eb0fb9fb5603cb7155))
+* update ([a9d593b](https://github.com/qq15725/rubickjs/commit/a9d593b45e773c224c4466f8ed28b726c3e8c71b))
+* update ([b6359fa](https://github.com/qq15725/rubickjs/commit/b6359fa3dcde5552213ccd0786fc89264904eea1))
+* update ([05073d8](https://github.com/qq15725/rubickjs/commit/05073d8fdc234c55508985dc8103d036bf0d4d11))
+
+
+
 ## [0.0.1-beta.2](https://github.com/qq15725/rubickjs/compare/v0.0.1-beta.1...v0.0.1-beta.2) (2023-09-25)
 
 
