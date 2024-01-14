@@ -2,9 +2,9 @@ import { customNode, property, protectedProperty } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
 import { Element2D } from './Element2D'
-import { ImageResource } from './ImageResource'
+import { Image2DResource } from './Image2DResource'
 import type { Texture } from '@rubickjs/core'
-import type { ImageFrame } from './ImageResource'
+import type { Image2DFrame } from './Image2DResource'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
 import type { Element2DProperties } from './Element2D'
 
@@ -12,9 +12,9 @@ export interface Image2DProperties extends Element2DProperties {
   src?: string
 }
 
-@customNode('Image2D')
+@customNode('image2D')
 export class Image2D extends Element2D {
-  @protectedProperty() resource?: ImageResource
+  @protectedProperty() resource?: Image2DResource
   @property({ default: '' }) src!: string
 
   get currentTexture(): Texture | undefined { return this.resource?.frames[this._frameIndex]?.texture }
@@ -46,12 +46,12 @@ export class Image2D extends Element2D {
 
   decode(): Promise<void> { return this._wait }
 
-  set(source: Texture | Array<ImageFrame> | ImageResource): this {
-    let resource: ImageResource
-    if (source instanceof ImageResource) {
+  set(source: Texture | Array<Image2DFrame> | Image2DResource): this {
+    let resource: Image2DResource
+    if (source instanceof Image2DResource) {
       resource = source
     } else {
-      resource = new ImageResource(source)
+      resource = new Image2DResource(source)
     }
     this.resource = resource.updateDuration()
     if (this.currentTexture && (!this.width || !this.height)) {

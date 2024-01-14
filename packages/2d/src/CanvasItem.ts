@@ -18,7 +18,7 @@ export interface CanvasItemProperties extends NodeProperties {
   backgroundColor?: string
 }
 
-@customNode('CanvasItem')
+@customNode('canvasItem')
 export class CanvasItem extends Node {
   @property({ default: 1 }) opacity!: number
   @property() backgroundColor?: ColorValue
@@ -37,9 +37,9 @@ export class CanvasItem extends Node {
 
   // 2d batch render
   protected _context = Canvas.getContext('2d')
-  protected _needsRedraw = false
-  protected _needsReflow = false
-  protected _needsRepaint = false
+  protected _waitingRedraw = false
+  protected _waitingReflow = false
+  protected _waitingRepaint = false
   protected _originalBatchables: Array<CanvasBatchable2D> = []
   protected _layoutedBatchables: Array<CanvasBatchable2D> = []
   protected _batchables: Array<CanvasBatchable2D> = []
@@ -115,9 +115,9 @@ export class CanvasItem extends Node {
     })
   }
 
-  requestRedraw(): void { this._needsRedraw = true }
-  requestReflow(): void { this._needsReflow = true }
-  requestRepaint(): void { this._needsRepaint = true }
+  requestRedraw(): void { this._waitingRedraw = true }
+  requestReflow(): void { this._waitingReflow = true }
+  requestRepaint(): void { this._waitingRepaint = true }
 
   protected override _process(delta: number): void {
     if (!this.isRenderable()) {
@@ -134,17 +134,17 @@ export class CanvasItem extends Node {
     super._process(delta)
 
     let batchables: Array<CanvasBatchable2D> | undefined
-    if (this._needsRedraw || !this._originalBatchables) {
+    if (this._waitingRedraw || !this._originalBatchables) {
       this._draw()
       batchables = this._layoutedBatchables = this._relayout(
         this._originalBatchables = this._context.toBatchables(),
       )
       this._context.reset()
-    } else if (this._needsReflow && this._originalBatchables) {
+    } else if (this._waitingReflow && this._originalBatchables) {
       batchables = this._layoutedBatchables = this._reflow(
         this._originalBatchables,
       )
-    } else if (this._needsRepaint && this._layoutedBatchables) {
+    } else if (this._waitingRepaint && this._layoutedBatchables) {
       batchables = this._repaint(
         this._layoutedBatchables,
       )
@@ -152,9 +152,9 @@ export class CanvasItem extends Node {
 
     if (batchables) {
       this._batchables = batchables
-      this._needsRedraw = false
-      this._needsReflow = false
-      this._needsRepaint = false
+      this._waitingRedraw = false
+      this._waitingReflow = false
+      this._waitingRepaint = false
       this._onUpdateBatchables()
     }
   }

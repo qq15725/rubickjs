@@ -3,7 +3,6 @@ import { customNode, property } from './decorators'
 import { ReactiveTarget } from './ReactiveTarget'
 import type { SceneTree } from './SceneTree'
 import type { Maskable, WebGLRenderer } from '@rubickjs/renderer'
-import type { UIInputEvent } from '@rubickjs/input'
 
 export enum InternalMode {
   DEFAULT = 0,
@@ -219,7 +218,7 @@ export class Node extends ReactiveTarget {
     }
   }
 
-  input(event: UIInputEvent): void {
+  input(event: UIEvent): void {
     for (let i = this._children.length - 1; i >= 0; i--) {
       this._children[i].input(event)
     }
@@ -377,6 +376,6 @@ export class Node extends ReactiveTarget {
   protected _ready(): void { /** override */ }
   protected _exitTree(): void { /** override */ }
   protected _process(_delta: number): void { /** override */ }
-  protected _input(_event: UIInputEvent): void { /** override */ }
+  protected _input(_event: UIEvent): void { /** override */ }
   protected _render(_renderer: WebGLRenderer): void { /** override */ }
 }

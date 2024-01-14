@@ -10,7 +10,7 @@ export interface Element2DProperties extends Node2DProperties {
 }
 
 @customNode({
-  tagName: 'Element2D',
+  tagName: 'element2D',
   renderable: true,
 })
 export class Element2D extends Node2D {

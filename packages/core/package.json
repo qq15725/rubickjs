@@ -45,7 +45,6 @@
   },
   "dependencies": {
     "@rubickjs/color": "workspace:*",
-    "@rubickjs/input": "workspace:*",
     "@rubickjs/math": "workspace:*",
     "@rubickjs/renderer": "workspace:*",
     "@rubickjs/shared": "workspace:*"

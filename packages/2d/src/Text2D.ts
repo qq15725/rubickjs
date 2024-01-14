@@ -74,7 +74,7 @@ export interface Text2DProperties extends Element2DProperties, Partial<TextStyle
   pixelRatio?: number
 }
 
-@customNode('Text2D')
+@customNode('text2D')
 export class Text2D extends Element2D {
   @property({ default: null }) splitMode!: 'char' | 'paragraph' | null
   @property({ default: '' }) text!: string | Array<StyleableTextParagraph>

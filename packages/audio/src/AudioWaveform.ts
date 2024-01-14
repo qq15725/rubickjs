@@ -102,7 +102,7 @@ export class AudioWaveform extends Element2D {
     }
 
     this._src?.requestUpload()
-    this._requestRedraw()
+    this.requestRedraw()
   }
 
   protected override _process(delta: number) {
@@ -119,10 +119,5 @@ export class AudioWaveform extends Element2D {
         this.height! / src.height,
       )
     }
-  }
-
-  protected override _drawFill() {
-    this._drawSrc()
-    super._drawFill()
   }
 }

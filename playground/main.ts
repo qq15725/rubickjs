@@ -2,8 +2,12 @@ import { Animation, Effect, Engine, Graphics2D, Image2D, Node2D, Text2D } from '
 
 const engine = new Engine()
 
+engine.on('pointerdown', e => {
+  console.log(e.target)
+})
+
 // view
-const view = engine.observeView().view!
+const view = engine.observe().view!
 view.style.width = '100vw'
 view.style.height = '100vh'
 document.body.append(view)
@@ -86,7 +90,14 @@ engine.timeline.on('update', (_, delta) => {
   group.rotate += 0.01 * delta
 })
 
-engine.root.addChild(new Graphics2D({ backgroundColor: '#000000' }).drawRect(200, 200, 300, 300))
+engine.root.addChild(
+  new Graphics2D({
+    x: 200,
+    y: 200,
+    backgroundColor: '#000000',
+  })
+    .drawRect(0, 0, 300, 300),
+)
 
 engine.start()
 

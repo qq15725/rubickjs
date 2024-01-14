@@ -5,7 +5,7 @@ import { Node2D } from './Node2D'
 import type { Polygon } from '@rubickjs/math'
 
 @customNode({
-  tagName: 'Graphics2D',
+  tagName: 'graphics2D',
   renderable: true,
 })
 export class Graphics2D extends Node2D {

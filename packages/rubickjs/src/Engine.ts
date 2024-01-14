@@ -1,11 +1,22 @@
 import { Color } from '@rubickjs/color'
 import { WebGLRenderer } from '@rubickjs/renderer'
-import { SceneTree } from '@rubickjs/core'
-import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER, createHTMLCanvas } from '@rubickjs/shared'
+import { EventTarget, InternalMode, SceneTree, nextTick } from '@rubickjs/core'
+import { DEVICE_PIXEL_RATIO, SUPPORTS_RESIZE_OBSERVER } from '@rubickjs/shared'
 import { Input } from '@rubickjs/input'
-import type { Timer, Viewport } from '@rubickjs/core'
+import { Assets } from '@rubickjs/assets'
 import type { EngineOptions } from './EngineOptions'
 import type { PointerInputEvent, WheelInputEvent } from '@rubickjs/input'
+import type { ColorValue } from '@rubickjs/color'
+import type { Node, Timer, Viewport } from '@rubickjs/core'
+
+export const defaultOptions = {
+  alpha: true,
+  stencil: true,
+  antialias: false,
+  premultipliedAlpha: true,
+  preserveDrawingBuffer: false,
+  powerPreference: 'default',
+} as const
 
 interface EngineEventMap {
   'pointerdown': PointerInputEvent
@@ -22,43 +33,23 @@ export interface Engine {
   off<K extends keyof EngineEventMap>(type: K, listener: (this: Engine, ev: EngineEventMap[K]) => any, options?: boolean | EventListenerOptions): this
 }
 
-export class Engine extends EventEmitter {
-  /**
-   * Input
-   */
+export class Engine extends EventTarget {
   readonly input = new Input()
-
-  /**
-   * WebGLRenderer
-   */
   readonly renderer: WebGLRenderer
-
-  /**
-   * Device pixel ratio
-   */
   get pixelRatio(): number { return this.renderer.pixelRatio }
-  set pixelRatio(val) {
-    if (this.renderer.pixelRatio !== val) {
-      this.renderer.pixelRatio = val
-      this.resize(this.width, this.height, false)
-    }
-  }
-
   get view(): HTMLCanvasElement | undefined { return this.renderer.view }
   get screen(): { x: number; y: number; width: number; height: number } { return this.renderer.screen }
   get width(): number { return this.screen.width }
   get height(): number { return this.screen.height }
 
-  protected _resizeObserver = SUPPORTS_RESIZE_OBSERVER
+  readonly resizeObserver = SUPPORTS_RESIZE_OBSERVER
     ? new ResizeObserver((entries) => {
       const entry = entries[0]
       if (entry.target === this.view) {
-        if (this.view.style.width && this.view.style.height) {
-          const { inlineSize: width, blockSize: height } = Array.isArray(entry.contentBoxSize)
-            ? entry.contentBoxSize[0]
-            : entry.contentBoxSize
-          this.resize(width, height, false)
-        }
+        const { inlineSize: width, blockSize: height } = Array.isArray(entry.contentBoxSize)
+          ? entry.contentBoxSize[0]
+          : entry.contentBoxSize
+        this.resize(width, height, false)
       }
     })
     : undefined
@@ -66,20 +57,20 @@ export class Engine extends EventEmitter {
   /**
    * Scene tree
    */
-  readonly tree = new SceneTree()
+  readonly tree: SceneTree
   get timeline(): Timer { return this.tree.timeline }
   get root(): Viewport { return this.tree.root }
+  get starting(): boolean { return this.tree.starting }
 
   /**
    * Background color
    */
-  protected _background = new Color()
-  get background() { return this._background.value }
-  set background(val) {
-    this._background.value = val
-    const { r, g, b, a } = this._background
-    this.renderer.gl.clearColor(r, g, b, a)
-  }
+  readonly background = new Color()
+
+  /**
+   * Data
+   */
+  data?: any
 
   constructor(options: EngineOptions = {}) {
     super()
@@ -90,51 +81,47 @@ export class Engine extends EventEmitter {
       height,
       pixelRatio = DEVICE_PIXEL_RATIO,
       gl,
+      timeline,
+      data,
       background = [0, 0, 0, 0],
-      ...rendererOptions
+      ...glOptions
     } = options
 
-    this.tree = new SceneTree()
-    this.renderer = new WebGLRenderer(gl ?? view ?? createHTMLCanvas(), {
-      alpha: true,
-      stencil: true,
-      antialias: false,
-      premultipliedAlpha: true,
-      preserveDrawingBuffer: false,
-      powerPreference: 'default',
-      ...rendererOptions,
-    })
+    this.tree = new SceneTree(timeline)
+    this.data = data
+    this.renderer = gl
+      ? new WebGLRenderer(gl)
+      : new WebGLRenderer(view, {
+        ...defaultOptions,
+        ...glOptions,
+      })
     this.renderer.pixelRatio = pixelRatio
+    this.view?.setAttribute('pixel-ratio', String(pixelRatio))
 
     this
-      ._setupContext()
-      ._setupInput()
+      .setupContext()
+      .setupInput()
       .resize(
         gl?.drawingBufferWidth || width || view?.clientWidth || 200,
         gl?.drawingBufferHeight || height || view?.clientHeight || 200,
         !view || (!view.style?.width && !view.style?.height),
       )
-
-    this.background = background
+      .setBackground(background)
   }
 
   /**
    * Setup WebGL context
    */
-  protected _setupContext(): this {
+  setupContext(): this {
     const gl = this.renderer.gl
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
-    gl.enable(gl.DEPTH_TEST)
-    gl.enable(gl.BLEND)
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
-    gl.depthMask(false)
     return this
   }
 
   /**
    * Setup input
    */
-  protected _setupInput(): this {
+  setupInput(): this {
     if (this.view) {
       this.input.setTarget(this.view)
 
@@ -158,18 +145,42 @@ export class Engine extends EventEmitter {
   }
 
   /**
+   * Set device pixel ratio
+   *
+   * @param value
+   */
+  setPixelRatio(value: number): this {
+    this.renderer.pixelRatio = value
+    this.resize(this.width, this.height, false)
+    this.view?.setAttribute('pixel-ratio', String(value))
+    return this
+  }
+
+  /**
+   * Set background color
+   *
+   * @param value
+   */
+  setBackground(value: ColorValue): this {
+    this.background.value = value
+    const { r, g, b, a } = this.background
+    this.renderer.gl.clearColor(r, g, b, a)
+    return this
+  }
+
+  /**
    * Start observe view
    */
-  observeView(): this {
-    if (this.view) this._resizeObserver?.observe(this.view)
+  observe(): this {
+    this.view && this.resizeObserver?.observe(this.view)
     return this
   }
 
   /**
    * Stop observe view
    */
-  unobserveView(): this {
-    if (this.view) this._resizeObserver?.unobserve(this.view)
+  unobserve(): this {
+    this.view && this.resizeObserver?.unobserve(this.view)
     return this
   }
 
@@ -178,33 +189,48 @@ export class Engine extends EventEmitter {
    *
    * @param width
    * @param height
-   * @param updateStyle
+   * @param updateCss
    */
-  resize(width: number, height: number, updateStyle = true): this {
-    this.renderer.resize(width, height, updateStyle)
+  resize(width: number, height: number, updateCss = true): this {
+    this.renderer.resize(width, height, updateCss)
     this.root.width = width
     this.root.height = height
     this.renderer.program.uniforms.projectionMatrix = this.root.toProjectionArray(true)
     return this
   }
 
+  addChild(node: Node, internal = InternalMode.DEFAULT): this {
+    this.root.addChild(node, internal)
+    return this
+  }
+
+  nextTick(): Promise<void> {
+    return nextTick()
+  }
+
+  waitUntilLoad(): Promise<void> {
+    return Assets.waitUntilLoad()
+  }
+
   /**
    * Render scene tree
    */
-  render(delta = 0): void {
+  render(delta?: number): void {
     if (delta !== undefined) this.tree.deltaTime = delta
     this.tree.render(this.renderer)
   }
 
   /**
    * Start main loop
+   *
+   * @param fps
+   * @param speed
    */
-  start(fps = 60, speed = 1): void {
+  start(fps = 24, speed = 1): void {
     this.tree.fps = fps
     this.tree.speed = speed
-    this.tree.startLoop(delta => {
-      this.render(delta)
-    })
+    this.render()
+    this.tree.startLoop(delta => this.render(delta))
   }
 
   /**
@@ -218,11 +244,13 @@ export class Engine extends EventEmitter {
    * Destroy application
    */
   destroy(): void {
-    this.root.getChildren(true).forEach(node => {
-      this.root.removeChild(node)
-    })
-    this.unobserveView()
+    this.stop()
+    this.root.getChildren(true)
+      .forEach(node => this.root.removeChild(node))
+    this.input.removeEventListeners()
+    this.unobserve()
     this.renderer.destroy()
+    this.data = undefined
   }
 
   /**

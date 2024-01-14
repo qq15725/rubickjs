@@ -7,7 +7,6 @@ import { customNode } from './decorators'
 import { RenderStack } from './RenderStack'
 import type { Viewport } from './Viewport'
 import type { WebGLRenderer } from '@rubickjs/renderer'
-import type { UIInputEvent } from '@rubickjs/input'
 
 @customNode('sceneTree')
 export class SceneTree extends MainLoop {
@@ -25,7 +24,7 @@ export class SceneTree extends MainLoop {
     this.root.addChild(timeline, InternalMode.FRONT)
   }
 
-  input(event: UIInputEvent): void {
+  input(event: UIEvent): void {
     this.root.input(event)
   }
 

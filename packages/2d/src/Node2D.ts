@@ -1,11 +1,9 @@
 import { DEG_TO_RAD, Transform2D } from '@rubickjs/math'
 import { customNode, property } from '@rubickjs/core'
 import { PI_2, parseCssFunctions } from '@rubickjs/shared'
-import { PointerInputEvent } from '@rubickjs/input'
 import { CanvasItem } from './CanvasItem'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
 import type { CanvasItemProperties } from './CanvasItem'
-import type { UIInputEvent } from '@rubickjs/input'
 
 export interface Node2DProperties extends CanvasItemProperties {
   x?: number
@@ -25,7 +23,7 @@ export interface Node2DProperties extends CanvasItemProperties {
   transformOrigin?: string
 }
 
-@customNode('Node2D')
+@customNode('node2D')
 export class Node2D extends CanvasItem {
   @property({ default: 0 }) x!: number
   @property({ default: 0 }) y!: number
@@ -277,16 +275,16 @@ export class Node2D extends CanvasItem {
     super._process(delta)
   }
 
-  override input(event: UIInputEvent) {
+  override input(event: UIEvent) {
     super.input(event)
 
     if (!event.target && this.isRenderable()) {
-      if (event instanceof PointerInputEvent) {
-        const { screenX, screenY } = event
+      const { screenX, screenY } = event as PointerEvent
+      if (screenX && screenY) {
         const { width, height } = this
         const [x, y] = this._transform.inverse().applyToPoint(screenX, screenY)
         if (x >= 0 && x < width && y >= 0 && y < height) {
-          event.target = this
+          (event as any).target = this
         }
       }
     }

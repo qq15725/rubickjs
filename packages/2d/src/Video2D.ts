@@ -8,7 +8,7 @@ export interface Video2DProperties extends Element2DProperties {
   src?: string
 }
 
-@customNode('Video')
+@customNode('video2D')
 export class Video2D extends Element2D {
   @property({ default: '' }) src!: string
 
