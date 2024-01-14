@@ -120,9 +120,6 @@ importers:
       '@rubickjs/color':
         specifier: workspace:*
         version: link:../color
-      '@rubickjs/input':
-        specifier: workspace:*
-        version: link:../input
       '@rubickjs/math':
         specifier: workspace:*
         version: link:../math
