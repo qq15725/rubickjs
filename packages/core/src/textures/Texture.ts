@@ -20,12 +20,12 @@ export class Texture<T extends TextureSource = TextureSource> extends Resource {
   static get GREEN() { return new this({ width: 1, height: 1, pixels: new Uint8Array([0, 255, 0, 255]) }) }
   static get BLUE() { return new this({ width: 1, height: 1, pixels: new Uint8Array([0, 0, 255, 255]) }) }
 
-  @protectedProperty() source!: T
-  @protectedProperty({ default: 0 }) width!: number
-  @protectedProperty({ default: 0 }) height!: number
-  @protectedProperty({ default: 'linear' }) filterMode!: TextureFilterMode
-  @protectedProperty({ default: 'clamp_to_edge' }) wrapMode!: TextureWrapMode
-  @protectedProperty({ default: 1 }) pixelRatio!: number
+  @protectedProperty() declare source: T
+  @protectedProperty({ default: 0 }) declare width: number
+  @protectedProperty({ default: 0 }) declare height: number
+  @protectedProperty({ default: 'linear' }) declare filterMode: TextureFilterMode
+  @protectedProperty({ default: 'clamp_to_edge' }) declare wrapMode: TextureWrapMode
+  @protectedProperty({ default: 1 }) declare pixelRatio: number
 
   protected _isPowerOfTwo = false
   protected _needsUpload = false

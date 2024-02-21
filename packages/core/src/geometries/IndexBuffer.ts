@@ -8,8 +8,8 @@ export interface IndexBufferProperties {
 }
 
 export class IndexBuffer extends Resource {
-  @protectedProperty({ default: null }) data!: Uint16Array | null
-  @protectedProperty({ default: false }) dynamic!: boolean
+  @protectedProperty({ default: null }) declare data: Uint16Array | null
+  @protectedProperty({ default: false }) declare dynamic: boolean
 
   needsUpload = false
 

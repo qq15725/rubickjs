@@ -8,8 +8,8 @@ export interface VertexBufferProperties {
 }
 
 export class VertexBuffer extends Resource {
-  @protectedProperty({ default: null }) data!: BufferSource | null
-  @protectedProperty({ default: false }) dynamic!: boolean
+  @protectedProperty({ default: null }) declare data: BufferSource | null
+  @protectedProperty({ default: false }) declare dynamic: boolean
 
   needsUpload = false
 

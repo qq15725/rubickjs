@@ -13,10 +13,10 @@ export interface VertexAttributeProperties {
 }
 
 export class VertexAttribute extends Resource {
-  @protectedProperty() buffer!: VertexBuffer
-  @protectedProperty({ default: 0 }) size!: number
-  @protectedProperty({ default: false }) normalized!: boolean
-  @protectedProperty({ default: 'float' }) type!: 'float' | 'unsigned_byte' | 'unsigned_short'
+  @protectedProperty() declare buffer: VertexBuffer
+  @protectedProperty({ default: 0 }) declare size: number
+  @protectedProperty({ default: false }) declare normalized: boolean
+  @protectedProperty({ default: 'float' }) declare type: 'float' | 'unsigned_byte' | 'unsigned_short'
   @protectedProperty() stride?: number
   @protectedProperty() offset?: number
   @protectedProperty() divisor?: number

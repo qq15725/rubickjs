@@ -1,8 +1,8 @@
-import { EventTarget } from '@rubickjs/core'
+import { EventEmitter } from '@rubickjs/shared'
 import type { IAudioNode } from '../interfaces'
 import type { AudioProcessor } from './AudioProcessor'
 
-export class AudioPipeline extends EventTarget {
+export class AudioPipeline extends EventEmitter {
   protected _processers: Array<AudioProcessor> = []
 
   constructor(

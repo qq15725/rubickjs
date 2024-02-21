@@ -162,7 +162,6 @@ export abstract class Matrix extends EventEmitter {
     return array.slice()
   }
 
-  toName(): string {
-    return `Matrix${ this.rows }(${ this.rows }x${ this.cols })`
-  }
+  toName(): string { return `Matrix${ this.rows }(${ this.rows }x${ this.cols })` }
+  toJSON(): Array<number> { return this._array }
 }

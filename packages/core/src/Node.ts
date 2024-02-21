@@ -1,6 +1,6 @@
 import { clamp } from '@rubickjs/math'
 import { customNode, property } from './decorators'
-import { ReactiveTarget } from './ReactiveTarget'
+import { Reactive } from './Reactive'
 import type { SceneTree } from './SceneTree'
 import type { Maskable, WebGLRenderer } from '@rubickjs/renderer'
 
@@ -12,25 +12,26 @@ export enum InternalMode {
 
 export type Visibility = 'visible' | 'hidden'
 
-export interface NodeProperties {
+export interface NodeOptions {
   name?: string
   visibility?: Visibility
   visibleStartTime?: number
   visibleDuration?: number
 }
 
+let UID = 0
 @customNode('node')
-export class Node extends ReactiveTarget {
-  protected _tagName?: string
-  get tagName() { return this._tagName ?? 'unknown' }
+export class Node extends Reactive {
+  readonly instanceId = ++UID
+  readonly declare tagName: string
+  renderable?: boolean
 
+  // @ts-expect-error tagName
   @property() name = `${ this.tagName }:${ String(this.instanceId) }`
   @property() visibility?: Visibility
   @property() mask?: Maskable
-  @property({ default: 0 }) visibleStartTime!: number
-  @property({ default: Number.MAX_SAFE_INTEGER }) visibleDuration!: number
-
-  renderable?: boolean
+  @property({ default: 0 }) declare visibleStartTime: number
+  @property({ default: Number.MAX_SAFE_INTEGER }) declare visibleDuration: number
 
   /** @internal */
   _computedVisibility: Visibility = 'visible'
@@ -59,9 +60,9 @@ export class Node extends ReactiveTarget {
     return children ? children[children.length - 1] : undefined
   }
 
-  constructor(properties?: NodeProperties) {
+  constructor(options?: NodeOptions) {
     super()
-    properties && this.setProperties(properties)
+    options && this.setProperties(options)
   }
 
   /** Meta */
@@ -145,8 +146,7 @@ export class Node extends ReactiveTarget {
     this._computedVisibility = visibility
   }
 
-  override notification(what: string) {
-    super.notification(what)
+  notification(what: string) {
     switch (what) {
       case 'enterTree':
         this._enterTree()

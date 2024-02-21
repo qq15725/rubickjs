@@ -1,9 +1,10 @@
-import { EventTarget, GlobalTicker } from '@rubickjs/core'
+import { GlobalTicker } from '@rubickjs/core'
+import { EventEmitter } from '@rubickjs/shared'
 import type { AudioProcessor } from '../pipeline'
 import type { IPlayOptions, ISound } from '../interfaces'
 import type { HTMLAudio } from './HTMLAudio'
 
-export class HTMLSound extends EventTarget implements ISound {
+export class HTMLSound extends EventEmitter implements ISound {
   static readonly PADDING = 0.1
   protected _source: HTMLAudioElement | null = null
   protected _audio: HTMLAudio | null = null

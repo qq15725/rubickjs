@@ -1,7 +1,7 @@
 import { Color } from '@rubickjs/color'
 import { WebGLRenderer } from '@rubickjs/renderer'
-import { EventTarget, InternalMode, SceneTree, nextTick } from '@rubickjs/core'
-import { DEVICE_PIXEL_RATIO, SUPPORTS_RESIZE_OBSERVER } from '@rubickjs/shared'
+import { InternalMode, SceneTree, nextTick } from '@rubickjs/core'
+import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER } from '@rubickjs/shared'
 import { Input } from '@rubickjs/input'
 import { Assets } from '@rubickjs/assets'
 import type { EngineOptions } from './EngineOptions'
@@ -33,7 +33,7 @@ export interface Engine {
   off<K extends keyof EngineEventMap>(type: K, listener: (this: Engine, ev: EngineEventMap[K]) => any, options?: boolean | EventListenerOptions): this
 }
 
-export class Engine extends EventTarget {
+export class Engine extends EventEmitter {
   readonly input = new Input()
   readonly renderer: WebGLRenderer
   get pixelRatio(): number { return this.renderer.pixelRatio }
@@ -83,7 +83,7 @@ export class Engine extends EventTarget {
       gl,
       timeline,
       data,
-      background = [0, 0, 0, 0],
+      background = 0x00000000,
       ...glOptions
     } = options
 
@@ -96,7 +96,7 @@ export class Engine extends EventTarget {
         ...glOptions,
       })
     this.renderer.pixelRatio = pixelRatio
-    this.view?.setAttribute('pixel-ratio', String(pixelRatio))
+    this.view?.setAttribute('data-pixel-ratio', String(pixelRatio))
 
     this
       .setupContext()
@@ -152,7 +152,7 @@ export class Engine extends EventTarget {
   setPixelRatio(value: number): this {
     this.renderer.pixelRatio = value
     this.resize(this.width, this.height, false)
-    this.view?.setAttribute('pixel-ratio', String(value))
+    this.view?.setAttribute('data-pixel-ratio', String(value))
     return this
   }
 
@@ -195,7 +195,6 @@ export class Engine extends EventTarget {
     this.renderer.resize(width, height, updateCss)
     this.root.width = width
     this.root.height = height
-    this.renderer.program.uniforms.projectionMatrix = this.root.toProjectionArray(true)
     return this
   }
 

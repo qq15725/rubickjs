@@ -2,10 +2,7 @@ import { Material } from './Material'
 
 export class UvMaterial extends Material {
   protected static _instance: UvMaterial
-  static get instance() {
-    if (!this._instance) this._instance = new this()
-    return this._instance
-  }
+  static get instance() { return this._instance ??= new this() }
 
   constructor() {
     super({

@@ -1,11 +1,9 @@
-import type { Node } from '../Node'
-
 export interface CustomNodeOptions {
   tagName: string
   renderable?: boolean
 }
 
-export const customNodes = new Map<string, new () => Node>()
+export const customNodes = new Map<string, Function>()
 
 export function customNode(tagName: string): any
 export function customNode(options: CustomNodeOptions): any
@@ -18,19 +16,21 @@ export function customNode(options: string | CustomNodeOptions): any {
     ({ tagName, renderable } = options)
   }
 
-  return function (obj: any) {
-    Object.defineProperty(obj.prototype, '_tagName', {
+  return function (constructor: Function) {
+    Object.defineProperty(constructor.prototype, 'tagName', {
       value: tagName,
       enumerable: true,
       configurable: true,
     })
 
     if (typeof renderable !== 'undefined') {
-      Object.defineProperty(obj, 'renderable', {
+      Object.defineProperty(constructor, 'renderable', {
         value: renderable,
+        enumerable: false,
+        configurable: false,
       })
     }
 
-    customNodes.set(tagName, obj)
+    customNodes.set(tagName, constructor)
   }
 }

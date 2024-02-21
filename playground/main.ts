@@ -14,46 +14,52 @@ document.body.append(view)
 
 // text
 const text = new Text2D({
-  text: [
+  content: [
     {
       fragments: [
-        { text: 'He', style: { color: 'red', fontSize: 12 } },
-        { text: 'llo', style: { color: 'black' } },
+        { content: 'He', color: 'red', fontSize: 12 },
+        { content: 'llo', color: 'black' },
       ],
     },
-    { text: ', ', style: { color: 'grey' } },
-    { text: 'World!', style: { color: 'black' } },
+    { content: ', ', color: 'grey' },
+    { content: 'World!', color: 'black' },
   ],
-  left: 100,
-  top: 100,
-  width: 100,
-  height: 200,
-  fontSize: 22,
-  backgroundColor: '#0000FF',
-  textDecoration: 'underline',
+  style: {
+    left: 100,
+    top: 100,
+    width: 100,
+    height: 200,
+    fontSize: 22,
+    backgroundColor: '#0000FF',
+    textDecoration: 'underline',
+  },
 })
 
 engine.root.addChild(text)
-engine.root.addChild(new Text2D({ text: 'Text12312211221' }))
+engine.root.addChild(new Text2D({ content: 'Text12312211221' }))
 
 // sprite
 const bunny = new Image2D({
   src: 'https://pixijs.com/assets/bunny.png',
-  backgroundColor: '#0000FF',
-  borderRadius: 30,
+  style: {
+    backgroundColor: '#0000FF',
+    borderRadius: 30,
+  },
 })
 engine.root.addChild(bunny)
 
 // group
 const group = new Node2D({
-  left: 200,
-  top: 100,
+  style: {
+    left: 200,
+    top: 100,
+  },
 })
 for (let i = 0; i < 5; i++) {
   const item = new Image2D({
     src: 'https://pixijs.com/assets/bunny.png',
   })
-  item.x = i * 10
+  item.style.left = i * 10
   group.addChild(item)
 }
 
@@ -84,17 +90,19 @@ group.addChild(
 engine.root.addChild(group)
 
 engine.timeline.on('update', (_, delta) => {
-  bunny.x = engine.width / 2 - bunny.width / 2
-  bunny.y = engine.height / 2 - bunny.height / 2
-  bunny.rotate += 0.01 * delta
-  group.rotate += 0.01 * delta
+  bunny.style.left = engine.width / 2 - bunny.style.width / 2
+  bunny.style.top = engine.height / 2 - bunny.style.height / 2
+  bunny.style.rotate += 0.01 * delta
+  group.style.rotate += 0.01 * delta
 })
 
 engine.root.addChild(
   new Graphics2D({
-    x: 200,
-    y: 200,
-    backgroundColor: '#000000',
+    style: {
+      left: 200,
+      top: 200,
+      backgroundColor: '#000000',
+    },
   })
     .drawRect(0, 0, 300, 300),
 )

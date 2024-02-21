@@ -3,7 +3,7 @@ import { Resource } from './Resource'
 import { GlobalTicker } from './global'
 
 export abstract class MainLoop extends Resource {
-  @property() fps!: number
+  @property() declare fps: number
 
   protected _spf?: number
   speed = 1

@@ -1,38 +1,38 @@
 import { Node, customNode, property } from '@rubickjs/core'
-import { Color, ColorMatrix } from '@rubickjs/color'
+import { Color } from '@rubickjs/color'
 import { Canvas } from '@rubickjs/canvas'
 import { clamp } from '@rubickjs/math'
-import { PI_2, parseCssFunctions } from '@rubickjs/shared'
+import { Style2D } from './Style2D'
+import type { Style2DOptions } from './Style2D'
 import type { ColorValue } from '@rubickjs/color'
 import type { WebGLBlendMode, WebGLRenderer } from '@rubickjs/renderer'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
-import type { NodeProperties } from '@rubickjs/core'
+import type { NodeOptions } from '@rubickjs/core'
 
-export type CanvasItemBlendMode = WebGLBlendMode
-
-export interface CanvasItemProperties extends NodeProperties {
-  opacity?: number
+export interface CanvasItemOptions extends NodeOptions {
+  style?: Style2DOptions
   tint?: string
-  filter?: string
-  blendMode?: CanvasItemBlendMode
-  backgroundColor?: string
+  blendMode?: WebGLBlendMode
 }
 
 @customNode('canvasItem')
 export class CanvasItem extends Node {
-  @property({ default: 1 }) opacity!: number
-  @property() backgroundColor?: ColorValue
-  @property() tint?: ColorValue
-  @property() filter?: string
-  @property() blendMode?: CanvasItemBlendMode
+  protected declare _style: Style2D
+  get style() { return this._style }
+  set style(style) {
+    style.on('updateProperty', this._onUpdateStyleProperty)
+    this._style?.off('updateProperty', this._onUpdateStyleProperty)
+    this._style = style
+  }
 
   /** @internal */
-  _opacity = 1
-  /** @internal */
-  _colorMatrix = new ColorMatrix()
+  opacity = 1
+
+  @property() tint?: ColorValue
+  @property() blendMode?: WebGLBlendMode
 
   protected _parentOpacity?: number
-  protected _tint = new Color(0xFFFFFF)
+  protected _tint = new Color(0xFFFFFFFF)
   protected _backgroundColor = new Color(0x00000000)
 
   // 2d batch render
@@ -44,9 +44,18 @@ export class CanvasItem extends Node {
   protected _layoutedBatchables: Array<CanvasBatchable2D> = []
   protected _batchables: Array<CanvasBatchable2D> = []
 
-  constructor(properties?: CanvasItemProperties) {
+  constructor(options?: CanvasItemOptions) {
     super()
-    properties && this.setProperties(properties)
+    options && this.setProperties(options)
+    this._onUpdateStyleProperty = this._onUpdateStyleProperty.bind(this)
+    this.style = new Style2D()
+  }
+
+  override setProperties(properties: Record<PropertyKey, any>): this {
+    const { style, ...restProperties } = properties
+    super.setProperties(restProperties)
+    style && this.style.setProperties(style)
+    return this
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
@@ -56,12 +65,17 @@ export class CanvasItem extends Node {
       case 'blendMode':
         this.requestRepaint()
         break
-      case 'backgroundColor':
-        this._backgroundColor.value = value || 0x00000000
+      case 'tint':
+        this._tint.value = value || 0xFFFFFFFF
         this.requestRepaint()
         break
-      case 'tint':
-        this._tint.value = value || 0xFFFFFF
+    }
+  }
+
+  protected _onUpdateStyleProperty(key: PropertyKey, value: any, _oldValue: any): void {
+    switch (key) {
+      case 'backgroundColor':
+        this._backgroundColor.value = value || 0x00000000
         this.requestRepaint()
         break
       case 'opacity':
@@ -69,50 +83,14 @@ export class CanvasItem extends Node {
         this.requestRepaint()
         break
       case 'filter':
-        this._updateFilter()
         this.requestRepaint()
         break
     }
   }
 
   protected _updateOpacity(): void {
-    this._opacity = clamp(0, this.opacity ?? 1, 1)
-      * ((this._parent as CanvasItem)?._opacity ?? 1)
-  }
-
-  protected _updateFilter(): void {
-    const funs = parseCssFunctions(this.filter ?? '')
-    const matrix = this._colorMatrix.identity()
-    funs.forEach(({ name, args }) => {
-      const values = args.map(arg => arg.normalizedIntValue)
-      switch (name) {
-        case 'hue-rotate':
-        case 'hueRotate':
-          matrix.hueRotate(values[0] * PI_2)
-          break
-        case 'saturate':
-          matrix.saturate(values[0])
-          break
-        case 'brightness':
-          matrix.brightness(values[0])
-          break
-        case 'contrast':
-          matrix.contrast(values[0])
-          break
-        case 'invert':
-          matrix.invert(values[0])
-          break
-        case 'sepia':
-          matrix.sepia(values[0])
-          break
-        case 'opacity':
-          matrix.opacity(values[0])
-          break
-        case 'grayscale':
-          matrix.grayscale(values[0])
-          break
-      }
-    })
+    this.opacity = clamp(0, this.style.opacity, 1)
+      * ((this._parent as CanvasItem)?.opacity ?? 1)
   }
 
   requestRedraw(): void { this._waitingRedraw = true }
@@ -125,7 +103,7 @@ export class CanvasItem extends Node {
       return
     }
 
-    const parentOpacity = (this._parent as CanvasItem)?._opacity
+    const parentOpacity = (this._parent as CanvasItem)?.opacity
     if (parentOpacity !== this._parentOpacity) {
       this._parentOpacity = parentOpacity
       this._updateOpacity()
@@ -163,13 +141,14 @@ export class CanvasItem extends Node {
   protected _relayout(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> { return this._reflow(batchables) }
   protected _reflow(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> { return this._repaint(batchables) }
   protected _repaint(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> {
+    const colorMatrix = this.style.computedFilter
     return batchables.map(batchable => {
       return {
         ...batchable,
         backgroundColor: this._backgroundColor.abgr,
-        tint: this._tint.toArgb(this._opacity, true),
-        colorMatrix: this._colorMatrix.toMatrix4().toArray(true),
-        colorMatrixOffset: this._colorMatrix.toVector4().toArray(),
+        tint: this._tint.toArgb(this.opacity, true),
+        colorMatrix: colorMatrix.toMatrix4().toArray(true),
+        colorMatrixOffset: colorMatrix.toVector4().toArray(),
         blendMode: this.blendMode,
       }
     })

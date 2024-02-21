@@ -2,24 +2,24 @@ import { VideoTexture, customNode, property } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
 import { Element2D } from './Element2D'
-import type { Element2DProperties } from './Element2D'
+import type { Element2DOptions } from './Element2D'
 
-export interface Video2DProperties extends Element2DProperties {
+export interface Video2DOptions extends Element2DOptions {
   src?: string
 }
 
 @customNode('video2D')
 export class Video2D extends Element2D {
-  @property({ default: '' }) src!: string
+  @property({ default: '' }) declare src: string
 
   get texture() { return this._src }
 
   protected _wait = Promise.resolve()
   protected _src?: VideoTexture
 
-  constructor(properties?: Video2DProperties) {
+  constructor(options?: Video2DOptions) {
     super()
-    properties && this.setProperties(properties)
+    options && this.setProperties(options)
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
@@ -38,9 +38,9 @@ export class Video2D extends Element2D {
     const texture = await Assets.load(src)
     if (texture instanceof VideoTexture) {
       this._src = texture
-      if (!this.width || !this.height) {
-        this.width = this._src.width
-        this.height = this._src.height
+      if (!this.style.width || !this.style.height) {
+        this.style.width = this._src.width
+        this.style.height = this._src.height
       }
       this.requestRedraw()
     }
@@ -51,8 +51,8 @@ export class Video2D extends Element2D {
     if (src) {
       this._context.texture = src
       this._context.textureTransform = new Transform2D().scale(
-        this.width! / src.width,
-        this.height! / src.height,
+        this.style.width! / src.width,
+        this.style.height! / src.height,
       )
     }
     super._drawContent()

@@ -44,12 +44,16 @@
     "access": "public"
   },
   "devDependencies": {
-    "@rubickjs/core": "workspace:*",
+    "@rubickjs/assets": "workspace:*",
     "@rubickjs/canvas": "workspace:*",
-    "@rubickjs/assets": "workspace:*"
+    "@rubickjs/core": "workspace:*"
   },
   "peerDependencies": {
+    "@rubickjs/assets": "workspace:*",
     "@rubickjs/canvas": "workspace:*",
-    "@rubickjs/assets": "workspace:*"
+    "@rubickjs/core": "workspace:*"
+  },
+  "dependencies": {
+    "modern-text": "^0.0.16"
   }
 }

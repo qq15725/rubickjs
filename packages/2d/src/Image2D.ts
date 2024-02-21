@@ -6,16 +6,16 @@ import { Image2DResource } from './Image2DResource'
 import type { Texture } from '@rubickjs/core'
 import type { Image2DFrame } from './Image2DResource'
 import type { CanvasBatchable2D } from '@rubickjs/canvas'
-import type { Element2DProperties } from './Element2D'
+import type { Element2DOptions } from './Element2D'
 
-export interface Image2DProperties extends Element2DProperties {
+export interface Image2DOptions extends Element2DOptions {
   src?: string
 }
 
 @customNode('image2D')
 export class Image2D extends Element2D {
   @protectedProperty() resource?: Image2DResource
-  @property({ default: '' }) src!: string
+  @property({ default: '' }) declare src: string
 
   get currentTexture(): Texture | undefined { return this.resource?.frames[this._frameIndex]?.texture }
   get duration(): number { return this.resource?.duration ?? 0 }
@@ -29,9 +29,9 @@ export class Image2D extends Element2D {
   protected _complete = false
   protected _wait = Promise.resolve()
 
-  constructor(properties?: Image2DProperties) {
+  constructor(options?: Image2DOptions) {
     super()
-    properties && this.setProperties(properties)
+    options && this.setProperties(options)
   }
 
   protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
@@ -54,10 +54,10 @@ export class Image2D extends Element2D {
       resource = new Image2DResource(source)
     }
     this.resource = resource.updateDuration()
-    if (this.currentTexture && (!this.width || !this.height)) {
+    if (this.currentTexture && (!this.style.width || !this.style.height)) {
       const texture = this.currentTexture
-      this.width = texture.realWidth
-      this.height = texture.realHeight
+      this.style.width = texture.realWidth
+      this.style.height = texture.realHeight
     }
     return this
   }
@@ -120,8 +120,8 @@ export class Image2D extends Element2D {
     if (texture?.valid) {
       this._context.texture = texture
       this._context.textureTransform = new Transform2D().scale(
-        this.width! / texture.width,
-        this.height! / texture.height,
+        this.style.width! / texture.width,
+        this.style.height! / texture.height,
       )
       super._drawContent()
     }

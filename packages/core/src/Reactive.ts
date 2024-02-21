@@ -1,73 +1,18 @@
-import { EventTarget } from './EventTarget'
+import { EventEmitter } from '@rubickjs/shared'
 import { nextTick } from './global'
+import { getDeclarations } from './decorators'
+import type { PropertyDeclaration } from './decorators'
 
-/* @__INLINE__ */
-const JSCompiler_renameProperty = <P extends PropertyKey>(
-  prop: P,
-  _obj: unknown,
-): P => prop
-
-export interface PropertyDeclaration {
-  readonly default?: any
-  readonly protected?: boolean
-  readonly alias?: string
-}
-
-export class ReactiveTarget extends EventTarget {
-  static _finalized?: true
-  static propertyDeclarations = new Map<PropertyKey, PropertyDeclaration>()
-
-  static defineProperty(name: PropertyKey, declaration: PropertyDeclaration = {}): void {
-    this._prepare()
-    this.propertyDeclarations.set(name, declaration)
-    const {
-      default: defaultValue,
-      alias,
-    } = declaration
-    let descriptor = Object.getOwnPropertyDescriptor(this.prototype, name)
-    if (!descriptor) {
-      const key = alias ?? Symbol.for(String(name))
-      descriptor = {
-        get(this: ReactiveTarget) { return (this as any)[key] },
-        set(this: ReactiveTarget, v: unknown) { (this as any)[key] = v },
-      }
-    }
-    Object.defineProperty(this.prototype, name, {
-      get(this: ReactiveTarget) { return descriptor!.get?.call(this) ?? defaultValue },
-      set(this: ReactiveTarget, value: unknown) {
-        const oldValue = descriptor!.get?.call(this) ?? defaultValue
-        descriptor!.set?.call(this, value)
-        this.requestUpdate(name, oldValue, declaration)
-      },
-      configurable: true,
-      enumerable: true,
-    })
-  }
-
-  private static _prepare() {
-    // eslint-disable-next-line no-prototype-builtins
-    if (!this.hasOwnProperty(JSCompiler_renameProperty('propertyDeclarations', this))) {
-      const superCtor = Object.getPrototypeOf(this) as typeof ReactiveTarget
-      // eslint-disable-next-line no-prototype-builtins
-      if (!superCtor.hasOwnProperty(JSCompiler_renameProperty('_finalized', this))) {
-        superCtor._finalized = true
-        superCtor._prepare()
-      }
-      this.propertyDeclarations = new Map(superCtor.propertyDeclarations)
-    }
-  }
-
+export class Reactive extends EventEmitter {
   protected _defaultProperties?: Record<PropertyKey, any>
   protected _changedProperties = new Map<PropertyKey, unknown>()
   protected _updatePromise = Promise.resolve()
   protected _isUpdatePending = false
 
-  isDirty(key: string): boolean {
-    return this._changedProperties.has(key)
-  }
+  isDirty(key: string): boolean { return this._changedProperties.has(key) }
 
   getPropertyDeclarations(): Map<PropertyKey, PropertyDeclaration> {
-    return (this.constructor as typeof ReactiveTarget).propertyDeclarations
+    return getDeclarations(this.constructor)
   }
 
   getPropertyDeclaration(key: PropertyKey): PropertyDeclaration | undefined {
@@ -150,4 +95,6 @@ export class ReactiveTarget extends EventTarget {
 
   protected _onUpdate(_changed: Map<PropertyKey, unknown>): void { /** override */ }
   protected _onUpdateProperty(_key: PropertyKey, _value: any, _oldValue: any): void { /** override */ }
+
+  toJSON() { return this.getProperties() }
 }

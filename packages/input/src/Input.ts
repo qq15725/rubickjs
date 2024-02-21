@@ -263,7 +263,7 @@ export class Input extends EventEmitter {
     if (!this.target) return
     const width = Number(this.target.getAttribute('width')) || 0
     const height = Number(this.target.getAttribute('height')) || 0
-    const pixelRatio = Number(this.target.getAttribute('pixel-ratio')) || 1
+    const pixelRatio = Number(this.target.getAttribute('data-pixel-ratio')) || 1
     const rect = this.target.isConnected
       ? this.target.getBoundingClientRect()
       : { x: 0, y: 0, width, height, left: 0, top: 0 }

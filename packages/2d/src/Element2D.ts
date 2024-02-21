@@ -1,12 +1,11 @@
-import { Texture, customNode, property } from '@rubickjs/core'
+import { Texture, customNode } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
 import { Node2D } from './Node2D'
-import type { Node2DProperties } from './Node2D'
+import type { Node2DOptions } from './Node2D'
 
-export interface Element2DProperties extends Node2DProperties {
-  backgroundImage?: string
-  borderRadius?: number
+export interface Element2DOptions extends Node2DOptions {
+  //
 }
 
 @customNode({
@@ -14,18 +13,15 @@ export interface Element2DProperties extends Node2DProperties {
   renderable: true,
 })
 export class Element2D extends Node2D {
-  @property() borderRadius?: number
-  @property() backgroundImage?: string
-
   protected _backgroundImage?: Texture
 
-  constructor(properties?: Element2DProperties) {
+  constructor(options?: Element2DOptions) {
     super()
-    properties && this.setProperties(properties)
+    options && this.setProperties(options)
   }
 
-  protected override _onUpdateProperty(key: PropertyKey, value: any, oldValue: any) {
-    super._onUpdateProperty(key, value, oldValue)
+  protected override _onUpdateStyleProperty(key: PropertyKey, value: any, oldValue: any) {
+    super._onUpdateStyleProperty(key, value, oldValue)
 
     switch (key) {
       case 'backgroundImage':
@@ -55,8 +51,8 @@ export class Element2D extends Node2D {
     if (!texture?.valid) return
     this._context.texture = texture
     this._context.textureTransform = new Transform2D().scale(
-      this.width! / texture.width,
-      this.height! / texture.height,
+      this.style.width / texture.width,
+      this.style.height / texture.height,
     )
     this._drawRect()
   }
@@ -66,10 +62,10 @@ export class Element2D extends Node2D {
   }
 
   protected _drawRect() {
-    if (this.borderRadius) {
-      this._context.roundRect(0, 0, this.width, this.height, this.borderRadius)
+    if (this.style.borderRadius) {
+      this._context.roundRect(0, 0, this.style.width, this.style.height, this.style.borderRadius)
     } else {
-      this._context.rect(0, 0, this.width, this.height)
+      this._context.rect(0, 0, this.style.width, this.style.height)
     }
     this._context.fill()
   }

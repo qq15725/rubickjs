@@ -1,8 +1,8 @@
-import { EventTarget } from '@rubickjs/core'
+import { EventEmitter } from '@rubickjs/shared'
 import type { AudioProcessor } from '../pipeline'
 import type { IAudioContext } from '../interfaces'
 
-export class HTMLAudioContext extends EventTarget implements IAudioContext {
+export class HTMLAudioContext extends EventEmitter implements IAudioContext {
   protected static _instance?: HTMLAudioContext
   static get instance() {
     if (!this._instance) {

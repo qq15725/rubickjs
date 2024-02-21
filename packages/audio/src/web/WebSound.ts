@@ -1,9 +1,10 @@
-import { EventTarget, GlobalTicker } from '@rubickjs/core'
+import { GlobalTicker } from '@rubickjs/core'
+import { EventEmitter } from '@rubickjs/shared'
 import type { IPlayOptions, ISound } from '../interfaces'
 import type { AudioProcessor } from '../pipeline'
 import type { WebAudio } from './WebAudio'
 
-export class WebSound extends EventTarget implements ISound {
+export class WebSound extends EventEmitter implements ISound {
   protected _audio: WebAudio | null = null
   protected _sourceNode: AudioBufferSourceNode | null = null
   protected _gain: GainNode | null = null

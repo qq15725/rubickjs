@@ -27,11 +27,11 @@ export interface AnimationProperties {
 
 @customNode('animation')
 export class Animation extends Node {
-  @property({ default: 'parent' }) mode!: 'parent' | 'sibling'
-  @property({ default: false }) loop!: boolean
-  @property({ default: [] }) keyframes!: Array<Keyframe>
-  @property({ default: 0 }) startTime!: number
-  @property({ default: 2000 }) duration!: number
+  @property({ default: 'parent' }) declare mode: 'parent' | 'sibling'
+  @property({ default: false }) declare loop: boolean
+  @property({ default: [] }) declare keyframes: Array<Keyframe>
+  @property({ default: 0 }) declare startTime: number
+  @property({ default: 2000 }) declare duration: number
 
   protected _keyframes: Array<NormalizedKeyframe> = []
   protected _starting = false
