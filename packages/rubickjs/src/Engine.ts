@@ -109,6 +109,11 @@ export class Engine extends EventEmitter {
       .setBackground(background)
   }
 
+  use(provider: { install: (engine: Engine) => void }): this {
+    provider.install(this)
+    return this
+  }
+
   /**
    * Setup WebGL context
    */

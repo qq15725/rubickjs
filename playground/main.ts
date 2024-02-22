@@ -1,6 +1,8 @@
-import { Animation, Effect, Engine, Graphics2D, Image2D, Node2D, Text2D } from 'rubickjs'
+import { Animation, DnD, Effect, Engine, Graphics2D, Image2D, Node2D, Text2D } from 'rubickjs'
 
 const engine = new Engine()
+
+engine.use(new DnD())
 
 engine.on('pointerdown', e => {
   console.log(e.target)
@@ -41,6 +43,7 @@ engine.root.addChild(new Text2D({ content: 'Text12312211221' }))
 // sprite
 const bunny = new Image2D({
   src: 'https://pixijs.com/assets/bunny.png',
+  draggable: true,
   style: {
     backgroundColor: '#0000FF',
     borderRadius: 30,
@@ -90,8 +93,6 @@ group.addChild(
 engine.root.addChild(group)
 
 engine.timeline.on('update', (_, delta) => {
-  bunny.style.left = engine.width / 2 - bunny.style.width / 2
-  bunny.style.top = engine.height / 2 - bunny.style.height / 2
   bunny.style.rotate += 0.01 * delta
   group.style.rotate += 0.01 * delta
 })

@@ -19,7 +19,7 @@ export class Image2DResource extends Resource {
     } else if (source instanceof Texture) {
       frames = [{ texture: source, duration: 0 }]
     } else {
-      throw new TypeError('Failed new ImageResource')
+      throw new TypeError('Failed new Image2DResource')
     }
     this.frames = frames
     this.updateDuration()

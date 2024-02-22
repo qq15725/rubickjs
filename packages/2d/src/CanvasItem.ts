@@ -13,6 +13,7 @@ export interface CanvasItemOptions extends NodeOptions {
   style?: Style2DOptions
   tint?: string
   blendMode?: WebGLBlendMode
+  draggable?: boolean
 }
 
 @customNode('canvasItem')
@@ -30,6 +31,7 @@ export class CanvasItem extends Node {
 
   @property() tint?: ColorValue
   @property() blendMode?: WebGLBlendMode
+  @property() draggable?: boolean
 
   protected _parentOpacity?: number
   protected _tint = new Color(0xFFFFFFFF)

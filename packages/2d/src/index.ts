@@ -1,4 +1,5 @@
 export * from './CanvasItem'
+export * from './DnD'
 export * from './Element2D'
 export * from './Graphics2D'
 export * from './Image2D'
