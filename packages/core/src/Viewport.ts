@@ -7,7 +7,7 @@ import { customNode, property } from './decorators'
 import type { WebGLFramebufferOptions, WebGLRenderer } from '@rubickjs/renderer'
 
 @customNode({
-  tagName: 'viewport',
+  tag: 'viewport',
   renderable: true,
 })
 export class Viewport extends Node {

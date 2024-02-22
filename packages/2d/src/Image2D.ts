@@ -109,9 +109,7 @@ export class Image2D extends Element2D {
   }
 
   protected override _process(delta: number) {
-    if (this.isRenderable()) {
-      this._updateFrameIndex()
-    }
+    this._updateFrameIndex()
     super._process(delta)
   }
 

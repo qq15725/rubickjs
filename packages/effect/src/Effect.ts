@@ -32,7 +32,7 @@ export interface EffectContext {
 }
 
 @customNode({
-  tagName: 'effect',
+  tag: 'effect',
   renderable: true,
 })
 export class Effect extends Node {

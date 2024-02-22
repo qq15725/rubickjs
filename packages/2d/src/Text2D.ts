@@ -7,14 +7,14 @@ import type { Element2DOptions } from './Element2D'
 
 export interface Text2DOptions extends Element2DOptions, Partial<TextStyle> {
   pixelRatio?: number
-  splitMode?: 'char' | 'paragraph' | null
+  splitMode?: 'char' | 'paragraph'
   content?: TextContent
 }
 
 @customNode('text2D')
 export class Text2D extends Element2D {
   @property({ default: 2 }) declare pixelRatio: number
-  @property({ default: null }) declare splitMode: 'char' | 'paragraph' | null
+  @property() splitMode?: 'char' | 'paragraph'
   @property({ default: '' }) declare content: TextContent
   @property() fontFamilyUrl?: string
 
@@ -142,7 +142,6 @@ export class Text2D extends Element2D {
             this.addChild(
               new Text2D({
                 pixelRatio: this.pixelRatio,
-                splitMode: null,
                 content: fragment.content,
                 style: {
                   ...this.style,
@@ -162,7 +161,6 @@ export class Text2D extends Element2D {
           this.addChild(
             new Text2D({
               pixelRatio: this.pixelRatio,
-              splitMode: null,
               content: [paragraph],
               style: {
                 ...this.style,

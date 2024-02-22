@@ -80,10 +80,7 @@ export class Video2D extends Element2D {
   }
 
   protected override _process(delta: number) {
-    if (this.isRenderable()) {
-      this._updateVideoCurrentTime()
-    }
-
+    this._updateVideoCurrentTime()
     super._process(delta)
   }
 }

@@ -1,6 +1,6 @@
 import { Node, customNode, property } from '@rubickjs/core'
 import { Color } from '@rubickjs/color'
-import { Canvas } from '@rubickjs/canvas'
+import { CanvasRenderingContext2D } from '@rubickjs/canvas'
 import { clamp } from '@rubickjs/math'
 import { Style2D } from './Style2D'
 import type { Style2DOptions } from './Style2D'
@@ -38,7 +38,7 @@ export class CanvasItem extends Node {
   protected _backgroundColor = new Color(0x00000000)
 
   // 2d batch render
-  protected _context = Canvas.getContext('2d')
+  protected _context = new CanvasRenderingContext2D()
   protected _waitingRedraw = false
   protected _waitingReflow = false
   protected _waitingRepaint = false
@@ -100,11 +100,6 @@ export class CanvasItem extends Node {
   requestRepaint(): void { this._waitingRepaint = true }
 
   protected override _process(delta: number): void {
-    if (!this.isRenderable()) {
-      super._process(delta)
-      return
-    }
-
     const parentOpacity = (this._parent as CanvasItem)?.opacity
     if (parentOpacity !== this._parentOpacity) {
       this._parentOpacity = parentOpacity
@@ -112,7 +107,26 @@ export class CanvasItem extends Node {
     }
 
     super._process(delta)
+  }
 
+  protected _draw(): void { /** override */ }
+  protected _relayout(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> { return this._reflow(batchables) }
+  protected _reflow(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> { return this._repaint(batchables) }
+  protected _repaint(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> {
+    const colorMatrix = this.style.computedFilter
+    return batchables.map(batchable => {
+      return {
+        ...batchable,
+        backgroundColor: this._backgroundColor.abgr,
+        tint: this._tint.toArgb(this.opacity, true),
+        colorMatrix: colorMatrix.toMatrix4().toArray(true),
+        colorMatrixOffset: colorMatrix.toVector4().toArray(),
+        blendMode: this.blendMode,
+      }
+    })
+  }
+
+  protected override _render(renderer: WebGLRenderer): void {
     let batchables: Array<CanvasBatchable2D> | undefined
     if (this._waitingRedraw || !this._originalBatchables) {
       this._draw()
@@ -135,30 +149,8 @@ export class CanvasItem extends Node {
       this._waitingRedraw = false
       this._waitingReflow = false
       this._waitingRepaint = false
-      this._onUpdateBatchables()
     }
-  }
 
-  protected _draw(): void { /** override */ }
-  protected _relayout(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> { return this._reflow(batchables) }
-  protected _reflow(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> { return this._repaint(batchables) }
-  protected _repaint(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> {
-    const colorMatrix = this.style.computedFilter
-    return batchables.map(batchable => {
-      return {
-        ...batchable,
-        backgroundColor: this._backgroundColor.abgr,
-        tint: this._tint.toArgb(this.opacity, true),
-        colorMatrix: colorMatrix.toMatrix4().toArray(true),
-        colorMatrixOffset: colorMatrix.toVector4().toArray(),
-        blendMode: this.blendMode,
-      }
-    })
-  }
-
-  protected _onUpdateBatchables(): void { /** override */ }
-
-  protected override _render(renderer: WebGLRenderer): void {
     this._batchables.forEach(batchable => {
       batchable.texture?.upload(renderer)
 
@@ -167,5 +159,7 @@ export class CanvasItem extends Node {
         texture: batchable.texture?._glTexture(renderer),
       })
     })
+
+    super._render(renderer)
   }
 }

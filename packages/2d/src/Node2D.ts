@@ -78,12 +78,10 @@ export class Node2D extends CanvasItem {
   }
 
   protected override _process(delta: number) {
-    if (this.isRenderable()) {
-      const ptDirtyId = (this.getParent() as Node2D)?._transform?.dirtyId
-      if (ptDirtyId !== undefined && ptDirtyId !== this._transformParentDirtyId) {
-        this._transformParentDirtyId = ptDirtyId
-        this._updateTransform()
-      }
+    const ptDirtyId = (this.getParent() as Node2D)?._transform?.dirtyId
+    if (ptDirtyId !== undefined && ptDirtyId !== this._transformParentDirtyId) {
+      this._transformParentDirtyId = ptDirtyId
+      this._updateTransform()
     }
     super._process(delta)
   }

@@ -44,7 +44,10 @@ export class Reactive extends EventEmitter {
     const properties: Record<PropertyKey, any> = {}
     for (const [name, property] of this.getPropertyDeclarations()) {
       if (!property.protected && !property.alias && (!keys || keys.includes(name))) {
-        properties[name] = this.getProperty(name)
+        const value = this.getProperty(name)
+        if (value !== undefined) {
+          properties[name] = value
+        }
       }
     }
     return properties
@@ -96,5 +99,7 @@ export class Reactive extends EventEmitter {
   protected _onUpdate(_changed: Map<PropertyKey, unknown>): void { /** override */ }
   protected _onUpdateProperty(_key: PropertyKey, _value: any, _oldValue: any): void { /** override */ }
 
-  toJSON() { return this.getProperties() }
+  toJSON(): Record<string, any> {
+    return this.getProperties()
+  }
 }

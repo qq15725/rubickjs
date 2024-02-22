@@ -1,4 +1,4 @@
-import { Animation, DnD, Effect, Engine, Graphics2D, Image2D, Node2D, Text2D } from 'rubickjs'
+import { Animation, DnD, Effect, Engine, Graphics2D, Image2D, Node2D, Text2D, Video2D } from 'rubickjs'
 
 const engine = new Engine()
 
@@ -42,14 +42,24 @@ engine.root.addChild(new Text2D({ content: 'Text12312211221' }))
 
 // sprite
 const bunny = new Image2D({
-  src: 'https://pixijs.com/assets/bunny.png',
+  src: '/playground/assets/example.jpg',
   draggable: true,
+  mask: new Graphics2D().drawCircle(50, 50, 50),
   style: {
+    left: 700,
+    top: 100,
+    width: 200,
+    height: 200,
     backgroundColor: '#0000FF',
     borderRadius: 30,
   },
 })
 engine.root.addChild(bunny)
+
+engine.root.addChild(new Video2D({
+  draggable: true,
+  src: 'https://pixijs.com/assets/video.mp4',
+}))
 
 // group
 const group = new Node2D({
@@ -60,7 +70,11 @@ const group = new Node2D({
 })
 for (let i = 0; i < 5; i++) {
   const item = new Image2D({
-    src: 'https://pixijs.com/assets/bunny.png',
+    src: '/playground/assets/example.jpg',
+    style: {
+      width: 30,
+      height: 30,
+    },
   })
   item.style.left = i * 10
   group.addChild(item)
@@ -96,17 +110,6 @@ engine.timeline.on('update', (_, delta) => {
   bunny.style.rotate += 0.01 * delta
   group.style.rotate += 0.01 * delta
 })
-
-engine.root.addChild(
-  new Graphics2D({
-    style: {
-      left: 200,
-      top: 200,
-      backgroundColor: '#000000',
-    },
-  })
-    .drawRect(0, 0, 300, 300),
-)
 
 engine.start()
 

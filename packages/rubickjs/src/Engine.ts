@@ -1,13 +1,13 @@
 import { Color } from '@rubickjs/color'
 import { WebGLRenderer } from '@rubickjs/renderer'
 import { InternalMode, SceneTree, nextTick } from '@rubickjs/core'
-import { DEVICE_PIXEL_RATIO, EventEmitter, SUPPORTS_RESIZE_OBSERVER } from '@rubickjs/shared'
+import { DEVICE_PIXEL_RATIO, SUPPORTS_RESIZE_OBSERVER } from '@rubickjs/shared'
 import { Input } from '@rubickjs/input'
 import { Assets } from '@rubickjs/assets'
 import type { EngineOptions } from './EngineOptions'
 import type { PointerInputEvent, WheelInputEvent } from '@rubickjs/input'
 import type { ColorValue } from '@rubickjs/color'
-import type { Node, Timer, Viewport } from '@rubickjs/core'
+import type { Node } from '@rubickjs/core'
 
 export const defaultOptions = {
   alpha: true,
@@ -33,7 +33,7 @@ export interface Engine {
   off<K extends keyof EngineEventMap>(type: K, listener: (this: Engine, ev: EngineEventMap[K]) => any, options?: boolean | EventListenerOptions): this
 }
 
-export class Engine extends EventEmitter {
+export class Engine extends SceneTree {
   readonly input = new Input()
   readonly renderer: WebGLRenderer
   get pixelRatio(): number { return this.renderer.pixelRatio }
@@ -55,26 +55,11 @@ export class Engine extends EventEmitter {
     : undefined
 
   /**
-   * Scene tree
-   */
-  readonly tree: SceneTree
-  get timeline(): Timer { return this.tree.timeline }
-  get root(): Viewport { return this.tree.root }
-  get starting(): boolean { return this.tree.starting }
-
-  /**
    * Background color
    */
   readonly background = new Color()
 
-  /**
-   * Data
-   */
-  data?: any
-
   constructor(options: EngineOptions = {}) {
-    super()
-
     const {
       view,
       width,
@@ -82,13 +67,12 @@ export class Engine extends EventEmitter {
       pixelRatio = DEVICE_PIXEL_RATIO,
       gl,
       timeline,
-      data,
       background = 0x00000000,
       ...glOptions
     } = options
 
-    this.tree = new SceneTree(timeline)
-    this.data = data
+    super(timeline)
+
     this.renderer = gl
       ? new WebGLRenderer(gl)
       : new WebGLRenderer(view, {
@@ -99,8 +83,8 @@ export class Engine extends EventEmitter {
     this.view?.setAttribute('data-pixel-ratio', String(pixelRatio))
 
     this
-      .setupContext()
-      .setupInput()
+      ._setupContext()
+      ._setupInput()
       .resize(
         gl?.drawingBufferWidth || width || view?.clientWidth || 200,
         gl?.drawingBufferHeight || height || view?.clientHeight || 200,
@@ -114,19 +98,13 @@ export class Engine extends EventEmitter {
     return this
   }
 
-  /**
-   * Setup WebGL context
-   */
-  setupContext(): this {
+  protected _setupContext(): this {
     const gl = this.renderer.gl
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
     return this
   }
 
-  /**
-   * Setup input
-   */
-  setupInput(): this {
+  protected _setupInput(): this {
     if (this.view) {
       this.input.setTarget(this.view)
 
@@ -139,7 +117,7 @@ export class Engine extends EventEmitter {
       ].forEach(event => {
         this.input.on(event, (e: any) => {
           if (this.hasEventListener(event)) {
-            this.tree.input(e)
+            this.root.input(e)
             this.emit(event, e)
           }
         })
@@ -216,37 +194,18 @@ export class Engine extends EventEmitter {
     return Assets.waitUntilLoad()
   }
 
-  /**
-   * Render scene tree
-   */
-  render(delta?: number): void {
-    if (delta !== undefined) this.tree.deltaTime = delta
-    this.tree.render(this.renderer)
+  render(): void {
+    super.render(this.renderer)
   }
 
-  /**
-   * Start main loop
-   *
-   * @param fps
-   * @param speed
-   */
-  start(fps = 24, speed = 1): void {
-    this.tree.fps = fps
-    this.tree.speed = speed
+  start(): void {
     this.render()
-    this.tree.startLoop(delta => this.render(delta))
+    super.start(delta => {
+      this.deltaTime = delta
+      this.render()
+    })
   }
 
-  /**
-   * Stop main loop
-   */
-  stop(): void {
-    this.tree.stopLoop()
-  }
-
-  /**
-   * Destroy application
-   */
   destroy(): void {
     this.stop()
     this.root.getChildren(true)
@@ -254,12 +213,8 @@ export class Engine extends EventEmitter {
     this.input.removeEventListeners()
     this.unobserve()
     this.renderer.destroy()
-    this.data = undefined
   }
 
-  /**
-   * To pixels
-   */
   toPixels(): Uint8ClampedArray {
     return this.renderer.toPixels()
   }

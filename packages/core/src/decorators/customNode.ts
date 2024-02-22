@@ -1,24 +1,24 @@
 export interface CustomNodeOptions {
-  tagName: string
+  tag: string
   renderable?: boolean
 }
 
 export const customNodes = new Map<string, Function>()
 
-export function customNode(tagName: string): any
+export function customNode(tag: string): any
 export function customNode(options: CustomNodeOptions): any
 export function customNode(options: string | CustomNodeOptions): any {
-  let tagName: string
+  let tag: string
   let renderable: boolean | undefined
   if (typeof options === 'string') {
-    tagName = options
+    tag = options
   } else {
-    ({ tagName, renderable } = options)
+    ({ tag, renderable } = options)
   }
 
   return function (constructor: Function) {
-    Object.defineProperty(constructor.prototype, 'tagName', {
-      value: tagName,
+    Object.defineProperty(constructor.prototype, 'tag', {
+      value: tag,
       enumerable: true,
       configurable: true,
     })
@@ -31,6 +31,6 @@ export function customNode(options: string | CustomNodeOptions): any {
       })
     }
 
-    customNodes.set(tagName, constructor)
+    customNodes.set(tag, constructor)
   }
 }

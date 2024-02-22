@@ -24,10 +24,6 @@ export class SceneTree extends MainLoop {
     this.root.addChild(timeline, InternalMode.FRONT)
   }
 
-  input(event: UIEvent): void {
-    this.root.input(event)
-  }
-
   render(renderer: WebGLRenderer): void {
     this.emit('processing')
     this.root.notification('process')

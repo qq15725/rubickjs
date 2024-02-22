@@ -14,6 +14,7 @@ export type Visibility = 'visible' | 'hidden'
 
 export interface NodeOptions {
   name?: string
+  mask?: Maskable
   visibility?: Visibility
   visibleStartTime?: number
   visibleDuration?: number
@@ -23,15 +24,15 @@ let UID = 0
 @customNode('node')
 export class Node extends Reactive {
   readonly instanceId = ++UID
-  readonly declare tagName: string
+  readonly declare tag: string
   renderable?: boolean
 
-  // @ts-expect-error tagName
-  @property() name = `${ this.tagName }:${ String(this.instanceId) }`
-  @property() visibility?: Visibility
+  // @ts-expect-error tag
+  @property() name = `${ this.tag }:${ String(this.instanceId) }`
   @property() mask?: Maskable
-  @property({ default: 0 }) declare visibleStartTime: number
-  @property({ default: Number.MAX_SAFE_INTEGER }) declare visibleDuration: number
+  @property() visibility?: Visibility
+  @property() visibleStartTime?: number
+  @property() visibleDuration?: number
 
   /** @internal */
   _computedVisibility: Visibility = 'visible'
@@ -46,9 +47,18 @@ export class Node extends Reactive {
 
   get children(): Array<Node> { return this.getChildren() }
 
-  get visibleEndTime(): number { return this.visibleStartTime + this.visibleDuration }
-  get visibleRelativeTime(): number { return (this._tree?.timeline.currentTime ?? 0) - this.visibleStartTime }
-  get visibleProgress(): number { return clamp(0, this.visibleRelativeTime / this.visibleDuration, 1) }
+  get visibleTimeline(): Array<number> {
+    const start = this.visibleStartTime ?? 0
+    const duration = this.visibleDuration ?? Number.MAX_SAFE_INTEGER
+    return [start, start + duration]
+  }
+
+  get visibleEndTime(): number { return this.visibleTimeline[1] }
+  get visibleRelativeTime(): number { return (this._tree?.timeline.currentTime ?? 0) - this.visibleTimeline[0] }
+  get visibleProgress(): number {
+    const [start, end] = this.visibleTimeline
+    return clamp(0, this.visibleRelativeTime / (end - start), 1)
+  }
 
   get siblingIndex(): number { return this.getIndex() }
   set siblingIndex(toIndex) { this._parent?.moveChild(this, toIndex) }
@@ -136,11 +146,11 @@ export class Node extends Reactive {
       ?? 'visible'
 
     const currentTime = this._tree?.timeline.currentTime ?? 0
-    if (
-      visibility !== 'hidden'
-      && (currentTime < this.visibleStartTime || currentTime > this.visibleEndTime)
-    ) {
-      visibility = 'hidden'
+    if (visibility !== 'hidden') {
+      const [start, end] = this.visibleTimeline
+      if (currentTime < start || currentTime > end) {
+        visibility = 'hidden'
+      }
     }
 
     this._computedVisibility = visibility
@@ -378,4 +388,12 @@ export class Node extends Reactive {
   protected _process(_delta: number): void { /** override */ }
   protected _input(_event: UIEvent): void { /** override */ }
   protected _render(_renderer: WebGLRenderer): void { /** override */ }
+
+  override toJSON(): Record<string, any> {
+    return {
+      tag: this.tag,
+      props: super.toJSON(),
+      children: this.children.map(child => child.toJSON()),
+    }
+  }
 }

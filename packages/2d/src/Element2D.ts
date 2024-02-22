@@ -9,7 +9,7 @@ export interface Element2DOptions extends Node2DOptions {
 }
 
 @customNode({
-  tagName: 'element2D',
+  tag: 'element2D',
   renderable: true,
 })
 export class Element2D extends Node2D {

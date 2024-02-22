@@ -8,11 +8,9 @@ export abstract class MainLoop extends Resource {
   protected _spf?: number
   speed = 1
 
-  /** Starting */
   protected _starting = false
   get starting() { return this._starting }
 
-  /** Process */
   deltaTime = 0
   protected _nextDeltaTime = 0
   protected _process?: (delta: number) => void
@@ -32,7 +30,7 @@ export abstract class MainLoop extends Resource {
     }
   }
 
-  startLoop(process: (delta: number) => void) {
+  start(process: (delta: number) => void) {
     if (!this._starting) {
       this._starting = true
       this._process = process
@@ -40,7 +38,7 @@ export abstract class MainLoop extends Resource {
     }
   }
 
-  stopLoop() {
+  stop() {
     if (this._starting) {
       this._starting = false
       GlobalTicker.off(this._onNextTick, { sort: 0 })
