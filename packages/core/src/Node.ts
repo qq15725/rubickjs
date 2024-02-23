@@ -20,10 +20,8 @@ export interface NodeOptions {
   visibleDuration?: number
 }
 
-let UID = 0
 @customNode('node')
 export class Node extends Reactive {
-  readonly instanceId = ++UID
   readonly declare tag: string
   renderable?: boolean
 

@@ -1,15 +1,15 @@
 import { VideoTexture, customNode, property } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
-import { Element2D } from './Element2D'
-import type { Element2DOptions } from './Element2D'
+import { Element } from './Element'
+import type { ElementOptions } from './Element'
 
-export interface Video2DOptions extends Element2DOptions {
+export interface VideoOptions extends ElementOptions {
   src?: string
 }
 
-@customNode('video2D')
-export class Video2D extends Element2D {
+@customNode('video')
+export class Video extends Element {
   @property({ default: '' }) declare src: string
 
   get texture() { return this._src }
@@ -17,7 +17,7 @@ export class Video2D extends Element2D {
   protected _wait = Promise.resolve()
   protected _src?: VideoTexture
 
-  constructor(options?: Video2DOptions) {
+  constructor(options?: VideoOptions) {
     super()
     options && this.setProperties(options)
   }
@@ -49,8 +49,8 @@ export class Video2D extends Element2D {
   protected override _drawContent() {
     const src = this._src
     if (src) {
-      this._context.texture = src
-      this._context.textureTransform = new Transform2D().scale(
+      this.context.texture = src
+      this.context.textureTransform = new Transform2D().scale(
         this.style.width! / src.width,
         this.style.height! / src.height,
       )

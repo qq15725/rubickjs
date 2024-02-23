@@ -1,21 +1,23 @@
-import { Texture, customNode } from '@rubickjs/core'
+import { Texture, customNode, property } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
 import { Node2D } from './Node2D'
 import type { Node2DOptions } from './Node2D'
 
-export interface Element2DOptions extends Node2DOptions {
-  //
+export interface ElementOptions extends Node2DOptions {
+  draggable?: boolean
 }
 
 @customNode({
-  tag: 'element2D',
+  tag: 'element',
   renderable: true,
 })
-export class Element2D extends Node2D {
+export class Element extends Node2D {
+  @property() draggable?: boolean
+
   protected _backgroundImage?: Texture
 
-  constructor(options?: Element2DOptions) {
+  constructor(options?: ElementOptions) {
     super()
     options && this.setProperties(options)
   }
@@ -49,8 +51,8 @@ export class Element2D extends Node2D {
   protected _drawBackgroundImage(): void {
     const texture = this._backgroundImage
     if (!texture?.valid) return
-    this._context.texture = texture
-    this._context.textureTransform = new Transform2D().scale(
+    this.context.texture = texture
+    this.context.textureTransform = new Transform2D().scale(
       this.style.width / texture.width,
       this.style.height / texture.height,
     )
@@ -63,10 +65,10 @@ export class Element2D extends Node2D {
 
   protected _drawRect() {
     if (this.style.borderRadius) {
-      this._context.roundRect(0, 0, this.style.width, this.style.height, this.style.borderRadius)
+      this.context.roundRect(0, 0, this.style.width, this.style.height, this.style.borderRadius)
     } else {
-      this._context.rect(0, 0, this.style.width, this.style.height)
+      this.context.rect(0, 0, this.style.width, this.style.height)
     }
-    this._context.fill()
+    this.context.fill()
   }
 }

@@ -1,20 +1,20 @@
 import { customNode, property, protectedProperty } from '@rubickjs/core'
 import { Assets } from '@rubickjs/assets'
 import { Transform2D } from '@rubickjs/math'
-import { Element2D } from './Element2D'
-import { Image2DResource } from './Image2DResource'
+import { Element } from './Element'
+import { ImageResource } from './ImageResource'
 import type { Texture } from '@rubickjs/core'
-import type { Image2DFrame } from './Image2DResource'
-import type { CanvasBatchable2D } from '@rubickjs/canvas'
-import type { Element2DOptions } from './Element2D'
+import type { ImageFrame } from './ImageResource'
+import type { CanvasBatchable } from './CanvasContext'
+import type { ElementOptions } from './Element'
 
-export interface Image2DOptions extends Element2DOptions {
+export interface ImageOptions extends ElementOptions {
   src?: string
 }
 
-@customNode('image2D')
-export class Image2D extends Element2D {
-  @protectedProperty() resource?: Image2DResource
+@customNode('image')
+export class Image extends Element {
+  @protectedProperty() resource?: ImageResource
   @property({ default: '' }) declare src: string
 
   get currentTexture(): Texture | undefined { return this.resource?.frames[this._frameIndex]?.texture }
@@ -29,7 +29,7 @@ export class Image2D extends Element2D {
   protected _complete = false
   protected _wait = Promise.resolve()
 
-  constructor(options?: Image2DOptions) {
+  constructor(options?: ImageOptions) {
     super()
     options && this.setProperties(options)
   }
@@ -46,12 +46,12 @@ export class Image2D extends Element2D {
 
   decode(): Promise<void> { return this._wait }
 
-  set(source: Texture | Array<Image2DFrame> | Image2DResource): this {
-    let resource: Image2DResource
-    if (source instanceof Image2DResource) {
+  set(source: Texture | Array<ImageFrame> | ImageResource): this {
+    let resource: ImageResource
+    if (source instanceof ImageResource) {
       resource = source
     } else {
-      resource = new Image2DResource(source)
+      resource = new ImageResource(source)
     }
     this.resource = resource.updateDuration()
     if (this.currentTexture && (!this.style.width || !this.style.height)) {
@@ -116,8 +116,8 @@ export class Image2D extends Element2D {
   protected override _drawContent() {
     const texture = this.currentTexture
     if (texture?.valid) {
-      this._context.texture = texture
-      this._context.textureTransform = new Transform2D().scale(
+      this.context.texture = texture
+      this.context.textureTransform = new Transform2D().scale(
         this.style.width! / texture.width,
         this.style.height! / texture.height,
       )
@@ -125,7 +125,7 @@ export class Image2D extends Element2D {
     }
   }
 
-  protected override _repaint(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> {
+  protected override _repaint(batchables: Array<CanvasBatchable>): Array<CanvasBatchable> {
     const texture = this.currentTexture
     return super._repaint(
       batchables.map((batchable, i) => {

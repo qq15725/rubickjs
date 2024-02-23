@@ -8,10 +8,7 @@ import type { Material } from '../materials'
 
 export class QuadUvGeometry extends Geometry {
   protected static _instance: QuadUvGeometry
-  static get instance() {
-    if (!this._instance) this._instance = new this()
-    return this._instance
-  }
+  static get instance() { return this._instance ??= new this() }
 
   static draw(
     renderer: WebGLRenderer,

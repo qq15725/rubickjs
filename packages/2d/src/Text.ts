@@ -1,29 +1,29 @@
 import { InternalMode, Texture, customNode, property } from '@rubickjs/core'
 import { Transform2D } from '@rubickjs/math'
-import { Text } from 'modern-text'
-import { Element2D } from './Element2D'
+import { Text as BaseText } from 'modern-text'
+import { Element } from './Element'
 import type { TextContent, TextStyle } from 'modern-text'
-import type { Element2DOptions } from './Element2D'
+import type { ElementOptions } from './Element'
 
-export interface Text2DOptions extends Element2DOptions, Partial<TextStyle> {
+export interface TextOptions extends ElementOptions, Partial<TextStyle> {
   pixelRatio?: number
   splitMode?: 'char' | 'paragraph'
   content?: TextContent
 }
 
-@customNode('text2D')
-export class Text2D extends Element2D {
+@customNode('text')
+export class Text extends Element {
   @property({ default: 2 }) declare pixelRatio: number
   @property() splitMode?: 'char' | 'paragraph'
   @property({ default: '' }) declare content: TextContent
   @property() fontFamilyUrl?: string
 
-  protected _text = new Text()
+  protected _text = new BaseText()
   readonly textTexture = new Texture(this._text.view)
 
   protected _subTextsCount = 0
 
-  constructor(options?: Text2DOptions) {
+  constructor(options?: TextOptions) {
     super()
     options && this.setProperties(options)
   }
@@ -87,9 +87,9 @@ export class Text2D extends Element2D {
     }
   }
 
-  protected _getSubTexts(): Array<Text2D> {
+  protected _getSubTexts(): Array<Text> {
     return this.getChildren(InternalMode.FRONT)
-      .filter(node => node instanceof Text2D) as Array<Text2D>
+      .filter(node => node instanceof Text) as Array<Text>
   }
 
   protected _updateSubTexts() {
@@ -131,8 +131,6 @@ export class Text2D extends Element2D {
       this._subTextsCount = 0
     }
 
-    if (!this.splitMode) return
-
     const result = this._text.measure()
 
     switch (this.splitMode) {
@@ -140,7 +138,7 @@ export class Text2D extends Element2D {
         result.paragraphs.forEach(paragraph => {
           paragraph.fragments.forEach((fragment) => {
             this.addChild(
-              new Text2D({
+              new Text({
                 pixelRatio: this.pixelRatio,
                 content: fragment.content,
                 style: {
@@ -159,7 +157,7 @@ export class Text2D extends Element2D {
       case 'paragraph': {
         result.paragraphs.forEach(paragraph => {
           this.addChild(
-            new Text2D({
+            new Text({
               pixelRatio: this.pixelRatio,
               content: [paragraph],
               style: {
@@ -186,10 +184,10 @@ export class Text2D extends Element2D {
       this._text.update()
       this.textTexture.requestUpload()
       const texture = this.textTexture
-      this._context.texture = texture
-      this._context.textureTransform = new Transform2D().scale(
-        this.style.width! / texture.width,
-        this.style.height! / texture.height,
+      this.context.texture = texture
+      this.context.textureTransform = new Transform2D().scale(
+        this.style.width / texture.width,
+        this.style.height / texture.height,
       )
       super._drawContent()
     }

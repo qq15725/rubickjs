@@ -4,12 +4,7 @@ import type { IAudioContext } from '../interfaces'
 
 export class HTMLAudioContext extends EventEmitter implements IAudioContext {
   protected static _instance?: HTMLAudioContext
-  static get instance() {
-    if (!this._instance) {
-      this._instance = new HTMLAudioContext()
-    }
-    return this._instance
-  }
+  static get instance() { return this._instance ??= new HTMLAudioContext() }
 
   playbackRate = 1
   muted = false

@@ -3,7 +3,10 @@ import { nextTick } from './global'
 import { getDeclarations } from './decorators'
 import type { PropertyDeclaration } from './decorators'
 
+let UID = 0
 export class Reactive extends EventEmitter {
+  readonly instanceId = ++UID
+
   protected _defaultProperties?: Record<PropertyKey, any>
   protected _changedProperties = new Map<PropertyKey, unknown>()
   protected _updatePromise = Promise.resolve()

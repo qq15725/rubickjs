@@ -11,12 +11,11 @@ export class Polygon extends Shape {
 
   reset(): this {
     this.points.length = 0
-    this.closed = false
     return this
   }
 
   clone(): Polygon {
-    return new Polygon(this.points, this.closed)
+    return new Polygon(this.points.slice(), this.closed)
   }
 
   override buildContour(points: Array<number>): void {

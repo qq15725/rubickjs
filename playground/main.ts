@@ -1,4 +1,4 @@
-import { Animation, DnD, Effect, Engine, Graphics2D, Image2D, Node2D, Text2D, Video2D } from 'rubickjs'
+import { Animation, DnD, Effect, Engine, Graphics, Image, Node2D, Text, Texture, Video } from 'rubickjs'
 
 const engine = new Engine()
 
@@ -15,7 +15,9 @@ view.style.height = '100vh'
 document.body.append(view)
 
 // text
-const text = new Text2D({
+engine.root.addChild(new Text({ content: 'Text12312211221' }))
+engine.root.addChild(new Text({
+  draggable: true,
   content: [
     {
       fragments: [
@@ -35,16 +37,13 @@ const text = new Text2D({
     backgroundColor: '#0000FF',
     textDecoration: 'underline',
   },
-})
-
-engine.root.addChild(text)
-engine.root.addChild(new Text2D({ content: 'Text12312211221' }))
+}))
 
 // sprite
-const bunny = new Image2D({
+const bunny = new Image({
   src: '/playground/assets/example.jpg',
   draggable: true,
-  mask: new Graphics2D().drawCircle(50, 50, 50),
+  // mask: new Graphics().drawCircle(50, 50, 50),
   style: {
     left: 700,
     top: 100,
@@ -56,7 +55,7 @@ const bunny = new Image2D({
 })
 engine.root.addChild(bunny)
 
-engine.root.addChild(new Video2D({
+engine.root.addChild(new Video({
   draggable: true,
   src: 'https://pixijs.com/assets/video.mp4',
 }))
@@ -68,8 +67,21 @@ const group = new Node2D({
     top: 100,
   },
 })
+group.addChild(
+  new Animation({
+    duration: 3000,
+    keyframes: [
+      { left: 300, top: 100, offset: 0, easing: 'easeIn' },
+      { left: 400, top: 120, offset: 0.5, easing: 'easeOut' },
+      { left: 350, top: 120, offset: 0.8, easing: 'easeOut' },
+      { left: 300, top: 100, offset: 1 },
+    ],
+    // loop: true,
+  }),
+)
+engine.root.addChild(group)
 for (let i = 0; i < 5; i++) {
-  const item = new Image2D({
+  const item = new Image({
     src: '/playground/assets/example.jpg',
     style: {
       width: 30,
@@ -91,20 +103,28 @@ const effect = new Effect({
 }`,
 })
 
-group.addChild(
-  new Animation({
-    duration: 3000,
-    keyframes: [
-      { left: 300, top: 100, offset: 0, easing: 'easeIn' },
-      { left: 400, top: 120, offset: 0.5, easing: 'easeOut' },
-      { left: 350, top: 120, offset: 0.8, easing: 'easeOut' },
-      { left: 300, top: 100, offset: 1 },
-    ],
-    // loop: true,
-  }),
-)
+const line = new Graphics()
+engine.root.addChild(line)
+line.context.lineWidth = 10
+line.context.texture = Texture.RED
 
-engine.root.addChild(group)
+let press = false
+engine.on('pointerdown', e => {
+  press = true
+  line.context.beginPath()
+  line.context.moveTo(e.x, e.y)
+})
+
+engine.on('pointermove', e => {
+  if (!press) return
+  line.context.lineTo(e.x, e.y)
+  line.context.stroke()
+  line.requestRedraw()
+})
+
+engine.on('pointerup', () => {
+  press = false
+})
 
 engine.timeline.on('update', (_, delta) => {
   bunny.style.rotate += 0.01 * delta
@@ -114,5 +134,3 @@ engine.timeline.on('update', (_, delta) => {
 engine.start()
 
 ;(window as any).engine = engine
-;(window as any).group = group
-;(window as any).bunny = bunny

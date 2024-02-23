@@ -1,16 +1,16 @@
 import { Resource, Texture } from '@rubickjs/core'
 
-export interface Image2DFrame {
+export interface ImageFrame {
   texture: Texture
   duration: number
 }
 
-export class Image2DResource extends Resource {
-  frames: Array<Image2DFrame>
+export class ImageResource extends Resource {
+  frames: Array<ImageFrame>
   duration!: number
 
   constructor(
-    source: Texture | Array<Image2DFrame>,
+    source: Texture | Array<ImageFrame>,
   ) {
     super()
     let frames

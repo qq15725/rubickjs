@@ -3,7 +3,7 @@ import type { Batchable2D } from '@rubickjs/renderer'
 import type { Texture } from '@rubickjs/core'
 import type { LineCap, LineJoin, LineStyle, Shape, Transform2D } from '@rubickjs/math'
 
-export interface CanvasBatchable2D extends Batchable2D {
+export interface CanvasBatchable extends Batchable2D {
   type: 'stroke' | 'fill'
   texture?: Texture
 }
@@ -21,7 +21,7 @@ export interface FilledGraphics {
   textureTransform?: Transform2D
 }
 
-export class CanvasRenderingContext2D {
+export class CanvasContext {
   texture?: Texture
   textureTransform?: Transform2D
   lineCap?: LineCap
@@ -29,24 +29,27 @@ export class CanvasRenderingContext2D {
   lineWidth?: number
   miterLimit?: number
 
-  protected _currentPath = new Polygon()
-  protected _currentShapes: Array<Shape> = []
+  protected _path = new Polygon()
+  protected _shapes: Array<Shape> = []
   protected _stroked: Array<StrokedGraphics> = []
   protected _filled: Array<FilledGraphics> = []
 
   beginPath(): void {
-    this._currentPath.reset()
+    if (this._stroked[0]?.shapes[0] === this._path) {
+      this._stroked[0].shapes[0] = this._path.clone()
+    }
+    this._path.reset()
   }
 
   moveTo(x: number, y: number): void {
-    if (this._currentPath.points.length > 2) {
-      this._currentShapes.push(this._currentPath.clone())
+    if (this._path.points.length > 2) {
+      this._shapes.push(this._path.clone())
     }
-    this._currentPath.points = [x, y]
+    this._path.points = [x, y]
   }
 
   lineTo(x: number, y: number): void {
-    const points = this._currentPath.points
+    const points = this._path.points
     const len = points.length
     if (points[len - 2] !== x || points[len - 1] !== y) {
       points.push(x, y)
@@ -54,25 +57,25 @@ export class CanvasRenderingContext2D {
   }
 
   closePath(): void {
-    const path = this._currentPath.clone()
+    const path = this._path.clone()
     path.closed = true
-    this._currentShapes.push(path)
+    this._shapes.push(path)
   }
 
   rect(x: number, y: number, width: number, height: number): void {
-    this._currentShapes.push(new Rect(x, y, width, height))
+    this._shapes.push(new Rect(x, y, width, height))
   }
 
   roundRect(x: number, y: number, width: number, height: number, radii: number): void {
-    this._currentShapes.push(new RoundRect(x, y, width, height, radii))
+    this._shapes.push(new RoundRect(x, y, width, height, radii))
   }
 
   ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, counterclockwise = false): void {
-    this._currentShapes.push(new Ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise))
+    this._shapes.push(new Ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise))
   }
 
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise = false): void {
-    this._currentShapes.push(new Arc(x, y, radius, radius, startAngle, endAngle, counterclockwise))
+    this._shapes.push(new Arc(x, y, radius, radius, startAngle, endAngle, counterclockwise))
   }
 
   polygon(...path: Array<number>): void
@@ -91,7 +94,7 @@ export class CanvasRenderingContext2D {
     }
     const shape = new Polygon(points)
     shape.closed = closed
-    this._currentShapes.push(shape)
+    this._shapes.push(shape)
   }
 
   star(
@@ -102,22 +105,43 @@ export class CanvasRenderingContext2D {
     innerRadius?: number,
     rotation = 0,
   ): void {
-    this._currentShapes.push(new Star(x, y, points, radius, innerRadius, rotation))
+    this._shapes.push(new Star(x, y, points, radius, innerRadius, rotation))
   }
 
   stroke(): void {
-    this._stroked.push({
-      shapes: this._currentShapes.slice(),
-      texture: this.texture,
-      textureTransform: this.textureTransform,
-      style: {
-        cap: this.lineCap ?? 'butt',
-        join: this.lineJoin ?? 'miter',
-        width: this.lineWidth ?? 1,
-        miterLimit: this.miterLimit ?? 10,
-      },
-    })
-    this._currentShapes.length = 0
+    if (this._shapes.length) {
+      this._stroked.push({
+        shapes: this._shapes.slice(),
+        texture: this.texture,
+        textureTransform: this.textureTransform,
+        style: {
+          closed: this._path.closed,
+          cap: this.lineCap ?? 'butt',
+          join: this.lineJoin ?? 'miter',
+          width: this.lineWidth ?? 1,
+          miterLimit: this.miterLimit ?? 10,
+        },
+      })
+      this._shapes.length = 0
+    }
+
+    if (
+      this._path.points.length >= 4
+      && this._stroked[0]?.shapes[0] !== this._path
+    ) {
+      this._stroked.unshift({
+        shapes: [this._path],
+        texture: this.texture,
+        textureTransform: this.textureTransform,
+        style: {
+          closed: this._path.closed,
+          cap: this.lineCap ?? 'butt',
+          join: this.lineJoin ?? 'miter',
+          width: this.lineWidth ?? 1,
+          miterLimit: this.miterLimit ?? 10,
+        },
+      })
+    }
   }
 
   fillRect(x: number, y: number, width: number, height: number): void {
@@ -127,11 +151,11 @@ export class CanvasRenderingContext2D {
 
   fill(): void {
     this._filled.push({
-      shapes: this._currentShapes.slice(),
+      shapes: this._shapes.slice(),
       texture: this.texture,
       textureTransform: this.textureTransform,
     })
-    this._currentShapes.length = 0
+    this._shapes.length = 0
   }
 
   reset(): void {
@@ -141,8 +165,8 @@ export class CanvasRenderingContext2D {
     this.lineJoin = undefined
     this.lineWidth = undefined
     this.miterLimit = undefined
-    this._currentPath.reset()
-    this._currentShapes.length = 0
+    this._path.reset()
+    this._shapes.length = 0
     this._stroked.length = 0
     this._filled.length = 0
   }
@@ -170,15 +194,15 @@ export class CanvasRenderingContext2D {
     }
   }
 
-  toBatchables(): Array<CanvasBatchable2D> {
-    const batchables: Array<CanvasBatchable2D> = []
+  toBatchables(): Array<CanvasBatchable> {
+    const batchables: Array<CanvasBatchable> = []
     let vertices: Array<number> = []
     let indices: Array<number> = []
     let uvs: Array<number> = []
     let startUv = 0
     let texture: Texture | undefined
 
-    const push = (type: CanvasBatchable2D['type']) => {
+    const push = (type: CanvasBatchable['type']) => {
       batchables.push({
         type,
         vertices,
@@ -195,9 +219,6 @@ export class CanvasRenderingContext2D {
     for (let len = this._stroked.length, i = 0; i < len; i++) {
       const graphics = this._stroked[i]
       texture ??= graphics.texture
-      if (texture !== graphics.texture) {
-        push('stroke')
-      }
       const points: Array<number> = []
       for (let len = graphics.shapes.length, i = 0; i < len; i++) {
         graphics.shapes[i].buildContour(points)
@@ -205,9 +226,6 @@ export class CanvasRenderingContext2D {
       startUv = vertices.length
       Line.buildGeometry(points, vertices, indices, graphics.style)
       this.buildUvs(startUv, vertices, uvs, graphics.texture, graphics.textureTransform)
-    }
-
-    if (vertices.length) {
       push('stroke')
     }
 

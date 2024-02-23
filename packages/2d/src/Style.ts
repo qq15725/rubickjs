@@ -4,7 +4,7 @@ import { ColorMatrix } from '@rubickjs/color'
 import { DEG_TO_RAD, Transform2D } from '@rubickjs/math'
 import type { FontKerning, FontStyle, FontWeight, TextAlign, TextDecoration, TextWrap, VerticalAlign } from 'modern-text'
 
-export interface Style2DOptions {
+export interface StyleOptions {
   left?: number
   top?: number
   width?: number
@@ -38,7 +38,7 @@ export interface Style2DOptions {
   shadowBlur?: number
 }
 
-export class Style2D extends Reactive {
+export class Style extends Reactive {
   @property({ default: 0 }) declare left: number
   @property({ default: 0 }) declare top: number
   @property({ default: 0 }) declare width: number
@@ -71,7 +71,7 @@ export class Style2D extends Reactive {
   @property({ default: 0 }) declare shadowOffsetY: number
   @property({ default: 0 }) declare shadowBlur: number
 
-  constructor(options?: Style2DOptions) {
+  constructor(options?: StyleOptions) {
     super()
     options && this.setProperties(options)
   }

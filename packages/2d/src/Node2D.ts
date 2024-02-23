@@ -1,7 +1,7 @@
 import { Transform2D } from '@rubickjs/math'
 import { customNode } from '@rubickjs/core'
 import { CanvasItem } from './CanvasItem'
-import type { CanvasBatchable2D } from '@rubickjs/canvas'
+import type { CanvasBatchable } from './CanvasContext'
 import type { CanvasItemOptions } from './CanvasItem'
 
 export interface Node2DOptions extends CanvasItemOptions {
@@ -101,7 +101,7 @@ export class Node2D extends CanvasItem {
     }
   }
 
-  protected override _reflow(batchables: Array<CanvasBatchable2D>): Array<CanvasBatchable2D> {
+  protected override _reflow(batchables: Array<CanvasBatchable>): Array<CanvasBatchable> {
     return this._repaint(
       batchables.map(batchable => {
         return {
