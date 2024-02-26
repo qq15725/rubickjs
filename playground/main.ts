@@ -1,4 +1,4 @@
-import { Animation, DnD, Effect, Engine, Graphics, Image, Node2D, Text, Texture, Video } from 'rubickjs'
+import { Animation, DnD, Effect, Engine, Graphics, Image, Node2D, Text, Video } from 'rubickjs'
 
 const engine = new Engine()
 
@@ -104,22 +104,23 @@ const effect = new Effect({
 })
 
 const line = new Graphics()
+line.lineWidth = 10
+line.strokeRect(20, 10, 150, 100)
+
 engine.root.addChild(line)
-line.context.lineWidth = 10
-line.context.texture = Texture.RED
+line.strokeStyle = 'red'
 
 let press = false
 engine.on('pointerdown', e => {
   press = true
-  line.context.beginPath()
-  line.context.moveTo(e.x, e.y)
+  line.beginPath()
+  line.moveTo(e.x, e.y)
 })
 
 engine.on('pointermove', e => {
   if (!press) return
-  line.context.lineTo(e.x, e.y)
-  line.context.stroke()
-  line.requestRedraw()
+  line.lineTo(e.x, e.y)
+  line.stroke()
 })
 
 engine.on('pointerup', () => {

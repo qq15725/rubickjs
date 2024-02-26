@@ -1,7 +1,9 @@
 import { customNode } from '@rubickjs/core'
 import { PI_2 } from '@rubickjs/shared'
 import { Node2D } from './Node2D'
-import type { Polygon } from '@rubickjs/math'
+import type { ColorValue } from '@rubickjs/color'
+import type { Texture } from '@rubickjs/core'
+import type { LineCap, LineJoin, Polygon } from '@rubickjs/math'
 
 @customNode({
   tag: 'graphics',
@@ -10,33 +12,64 @@ import type { Polygon } from '@rubickjs/math'
 export class Graphics extends Node2D {
   protected _resetContext = false
 
-  drawRect(x: number, y: number, width: number, height: number): this {
-    this.context.rect(x, y, width, height)
-    this.context.fill()
-    this.requestRedraw()
-    return this
-  }
+  @Graphics._proxy() declare lineCap?: LineCap
+  @Graphics._proxy() declare lineJoin?: LineJoin
+  @Graphics._proxy() declare fillStyle?: ColorValue | Texture
+  @Graphics._proxy() declare strokeStyle?: ColorValue | Texture
+  @Graphics._proxy() declare lineWidth?: number
+  @Graphics._proxy() declare miterLimit?: number
+  @Graphics._proxy({ method: true }) declare rect: (x: number, y: number, width: number, height: number) => this
+  @Graphics._proxy({ method: true, redraw: true }) declare fillRect: (x: number, y: number, width: number, height: number) => this
+  @Graphics._proxy({ method: true, redraw: true }) declare strokeRect: (x: number, y: number, width: number, height: number) => this
+  @Graphics._proxy({ method: true }) declare roundRect: (x: number, y: number, width: number, height: number, radii: number) => this
+  @Graphics._proxy({ method: true }) declare ellipse: (x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, counterclockwise?: boolean) => this
+  @Graphics._proxy({ method: true }) declare arc: (x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean) => this
+  @Graphics._proxy({ method: true }) declare beginPath: () => this
+  @Graphics._proxy({ method: true }) declare moveTo: (x: number, y: number) => this
+  @Graphics._proxy({ method: true }) declare lineTo: (x: number, y: number) => this
+  @Graphics._proxy({ method: true }) declare closePath: () => this
+  @Graphics._proxy({ method: true, redraw: true }) declare fill: () => this
+  @Graphics._proxy({ method: true, redraw: true }) declare stroke: () => this
 
-  drawRoundRect(x: number, y: number, width: number, height: number, radius: number): this {
-    this.context.roundRect(x, y, width, height, radius)
-    this.context.fill()
-    this.requestRedraw()
-    return this
+  protected static _proxy(
+    options?: {
+      method?: boolean
+      redraw?: boolean
+    },
+  ) {
+    return function (target: Graphics, name: PropertyKey) {
+      Object.defineProperty(target.constructor.prototype, name, {
+        get() {
+          if (options?.method) {
+            return (...args: Array<any>) => {
+              // eslint-disable-next-line no-useless-call
+              this.context[name].call(this.context, ...args)
+              options.redraw && this.requestRedraw()
+              return target
+            }
+          }
+          return this.context[name]
+        },
+        set(value) {
+          this.context[name] = value
+        },
+        configurable: true,
+        enumerable: true,
+      })
+    }
   }
 
   drawCircle(x: number, y: number, radius: number): this {
-    this.context.arc(x + radius, y + radius, radius, 0, PI_2)
-    this.context.fill()
-    this.requestRedraw()
+    this.arc(x + radius, y + radius, radius, 0, PI_2)
+    this.fill()
     return this
   }
 
   drawEllipse(x: number, y: number, width: number, height: number): this {
     const rx = width / 2
     const ry = height / 2
-    this.context.ellipse(x + rx, y + ry, rx, ry, 0, 0, PI_2)
-    this.context.fill()
-    this.requestRedraw()
+    this.ellipse(x + rx, y + ry, rx, ry, 0, 0, PI_2)
+    this.fill()
     return this
   }
 
@@ -44,8 +77,7 @@ export class Graphics extends Node2D {
   drawPolygon(path: Array<number> | Polygon): this
   drawPolygon(...path: any[]): this {
     this.context.polygon(...path)
-    this.context.fill()
-    this.requestRedraw()
+    this.fill()
     return this
   }
 
@@ -58,20 +90,7 @@ export class Graphics extends Node2D {
     rotation = 0,
   ): this {
     this.context.star(x + radius, y + radius, points, radius, innerRadius, rotation)
-    this.context.fill()
-    this.requestRedraw()
-    return this
-  }
-
-  moveTo(x: number, y: number): this {
-    this.context.moveTo(x, y)
-    this.requestRedraw()
-    return this
-  }
-
-  lineTo(x: number, y: number): this {
-    this.context.lineTo(x, y)
-    this.requestRedraw()
+    this.fill()
     return this
   }
 }

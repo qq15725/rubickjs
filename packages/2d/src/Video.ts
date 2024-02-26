@@ -49,7 +49,7 @@ export class Video extends Element {
   protected override _drawContent() {
     const src = this._src
     if (src) {
-      this.context.texture = src
+      this.context.fillStyle = src
       this.context.textureTransform = new Transform2D().scale(
         this.style.width! / src.width,
         this.style.height! / src.height,

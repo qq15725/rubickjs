@@ -184,7 +184,7 @@ export class Text extends Element {
       this._text.update()
       this.textTexture.requestUpload()
       const texture = this.textTexture
-      this.context.texture = texture
+      this.context.fillStyle = texture
       this.context.textureTransform = new Transform2D().scale(
         this.style.width / texture.width,
         this.style.height / texture.height,

@@ -113,7 +113,7 @@ export class AudioWaveform extends Element {
   protected _drawSrc() {
     const src = this._src
     if (src?.valid) {
-      this._context.texture = src
+      this._context.fillStyle = src
       this._context.textureTransform = new Transform2D().scale(
         this.width! / src.width,
         this.height! / src.height,

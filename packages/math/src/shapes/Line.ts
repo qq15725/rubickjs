@@ -43,7 +43,6 @@ export class Line {
     // get first and last point.. figure out the middle!
     const firstPoint = { x: points[0], y: points[1] }
     const lastPoint = { x: points[points.length - 2], y: points[points.length - 1] }
-    // const closed = shape.type !== SHAPES.POLY || shape.closed
     const closedPath = Math.abs(firstPoint.x - lastPoint.x) < eps
       && Math.abs(firstPoint.y - lastPoint.y) < eps
 

@@ -1,6 +1,8 @@
 import { Arc, Ellipse, Line, Polygon, Rect, RoundRect, Star } from '@rubickjs/math'
+import { Color } from '@rubickjs/color'
+import { Texture } from '@rubickjs/core'
+import type { ColorValue } from '@rubickjs/color'
 import type { Batchable2D } from '@rubickjs/renderer'
-import type { Texture } from '@rubickjs/core'
 import type { LineCap, LineJoin, LineStyle, Shape, Transform2D } from '@rubickjs/math'
 
 export interface CanvasBatchable extends Batchable2D {
@@ -22,13 +24,16 @@ export interface FilledGraphics {
 }
 
 export class CanvasContext {
-  texture?: Texture
   textureTransform?: Transform2D
+
+  fillStyle?: ColorValue | Texture
+  strokeStyle?: ColorValue | Texture
   lineCap?: LineCap
   lineJoin?: LineJoin
   lineWidth?: number
   miterLimit?: number
 
+  protected _defaultStyle = Texture.BLACK
   protected _path = new Polygon()
   protected _shapes: Array<Shape> = []
   protected _stroked: Array<StrokedGraphics> = []
@@ -109,13 +114,22 @@ export class CanvasContext {
   }
 
   stroke(): void {
+    let texture: Texture = this._defaultStyle
+    if (this.strokeStyle) {
+      if (this.strokeStyle instanceof Texture) {
+        texture = this.strokeStyle
+      } else {
+        const color = new Color(this.strokeStyle)
+        texture = new Texture({ width: 1, height: 1, pixels: new Uint8Array([color.r8, color.g8, color.b8, color.a8]) })
+      }
+    }
     if (this._shapes.length) {
       this._stroked.push({
         shapes: this._shapes.slice(),
-        texture: this.texture,
+        texture,
         textureTransform: this.textureTransform,
         style: {
-          closed: this._path.closed,
+          closed: true,
           cap: this.lineCap ?? 'butt',
           join: this.lineJoin ?? 'miter',
           width: this.lineWidth ?? 1,
@@ -131,7 +145,7 @@ export class CanvasContext {
     ) {
       this._stroked.unshift({
         shapes: [this._path],
-        texture: this.texture,
+        texture,
         textureTransform: this.textureTransform,
         style: {
           closed: this._path.closed,
@@ -149,17 +163,32 @@ export class CanvasContext {
     this.fill()
   }
 
+  strokeRect(x: number, y: number, width: number, height: number): void {
+    this.rect(x, y, width, height)
+    this.stroke()
+  }
+
   fill(): void {
+    let texture: Texture = this._defaultStyle
+    if (this.fillStyle) {
+      if (this.fillStyle instanceof Texture) {
+        texture = this.fillStyle
+      } else {
+        const color = new Color(this.fillStyle)
+        texture = new Texture({ width: 1, height: 1, pixels: new Uint8Array([color.r8, color.g8, color.b8, color.a8]) })
+      }
+    }
     this._filled.push({
       shapes: this._shapes.slice(),
-      texture: this.texture,
+      texture,
       textureTransform: this.textureTransform,
     })
     this._shapes.length = 0
   }
 
   reset(): void {
-    this.texture = undefined
+    this.strokeStyle = undefined
+    this.fillStyle = undefined
     this.textureTransform = undefined
     this.lineCap = undefined
     this.lineJoin = undefined

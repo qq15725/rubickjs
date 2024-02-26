@@ -51,7 +51,7 @@ export class Element extends Node2D {
   protected _drawBackgroundImage(): void {
     const texture = this._backgroundImage
     if (!texture?.valid) return
-    this.context.texture = texture
+    this.context.fillStyle = texture
     this.context.textureTransform = new Transform2D().scale(
       this.style.width / texture.width,
       this.style.height / texture.height,

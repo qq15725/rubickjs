@@ -116,7 +116,7 @@ export class Image extends Element {
   protected override _drawContent() {
     const texture = this.currentTexture
     if (texture?.valid) {
-      this.context.texture = texture
+      this.context.fillStyle = texture
       this.context.textureTransform = new Transform2D().scale(
         this.style.width! / texture.width,
         this.style.height! / texture.height,
